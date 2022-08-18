@@ -65,22 +65,49 @@ bpmnModdle
     tree.shift()
     //console.log(tree)
 
-    tree.map(object => {
+    recall = tree.map(object => {
         if (object.id[0] === 'A'){
             object.nextObjs.map(next => {
                 if (next[0] === 'A'){
-                    console.log(ejs.render(sequence, { parent: object, child: idMap[adjList[next]]}));
+                console.log(ejs.render(sequence, { parent: object, child: idMap[next]}));
                 }
                 else if (next[0] === 'G'){
+                    let len = adjList[next].length
                     if(idMap[next].$type.split(":")[1][0] === 'E'){
                         console.log(ejs.render(exclusive, {parent: object, child1: idMap[adjList[next][0]], child2: idMap[adjList[next][1]]}))
                     }
                     else if(idMap[next].$type.split(":")[1][0] === 'P'){
                         if(adjList[next].length > 1){
-                            console.log(ejs.render(parallel, {parent: object, child1: idMap[adjList[next][0]], child2: idMap[adjList[next][1]]}))
+                            let children = []
+                            //console.log(idMap[adjList[next][1]].id)
+                            //console.log(adjList[idMap[adjList[next][1]].id])
+                            //console.log(ejs.render(parallel, {parent: object, child1: idMap[adjList[next][0]], child2: idMap[adjList[next][1]]}))
+                            for(let i = 0 ; i<len ; i++){
+                                if(idMap[adjList[next][i]].id[0] === 'G'){
+                                    let len2 = adjList[idMap[adjList[next][i]].id].length
+                                    if(len2 > 1){
+                                        for (let j = 0; j < len2 ; j++){
+                                            children.push(idMap[adjList[idMap[adjList[next][i]].id][j]])
+                                        }
+                                    }
+                                    else{
+                                        children.push(idMap[adjList[idMap[adjList[next][i]].id][0]])
+                                    }
+                                    continue
+                                }
+                                children.push(idMap[adjList[next][i]])
+                            }
+                            console.log(ejs.render(parallel, {parent: object, children: children}))
                         }
                         else{
-                            console.log(ejs.render(pure, {activity: object}))
+                            if(idMap[adjList[next][0]][0] === 'E'){
+                                console.log(ejs.render(pure, {activity: object}))
+                            }
+                            else{
+                                //console.log(idMap[adjList[next][0]])
+                                console.log(ejs.render(sequence, {parent: object, child: idMap[adjList[next][0]]}))
+                            }
+
                         }
                     }
                 }

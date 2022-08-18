@@ -1,3 +1,4 @@
-template <%= parent.name %> with
-    child1 : <%= child1.name %>
-    child2 : <%= child2.name %>
+template <%- parent.name %> with 
+<% children.forEach((child,index) => { -%>
+    child<%= index + 1 -%>: <%-child.name -%>  
+<% }) -%>
