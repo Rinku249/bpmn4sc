@@ -1,0 +1,11 @@
+template <%= parent.name %> with
+    child1 : <%= child1.name %>
+    child2 : <%= child2.name %>
+
+    let toDo = child1
+
+    choice ChooseTask: ()
+        controller <%= parent.id %>
+        do 
+            toDo = if condition then child1 else child2
+            
