@@ -65,7 +65,7 @@ bpmnModdle
     tree.shift()
     //console.log(tree)
 
-    recall = tree.map(object => {
+    tree.map(object => {
         if (object.id[0] === 'A'){
             object.nextObjs.map(next => {
                 if (next[0] === 'A'){
