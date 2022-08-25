@@ -1,17 +1,20 @@
-import {argv} from 'node:process';
+import { argv } from 'node:process';
 import fs from 'node:fs';
 import BPMNModdle from 'bpmn-moddle';
 import ejs from 'ejs';
 import { type } from 'node:os';
 
-const bpmnText = fs.readFileSync(argv[2], {encoding:'utf8', flag:'r'}); //argv se pasa al escribir en consola, como en c
+
+//local imports, first is only the bpmn model in xml text. Others are EJS scripts for correct formatting
+const bpmnText = fs.readFileSync(argv[2], { encoding: 'utf8', flag: 'r' }); 
 var pure = fs.readFileSync('templates/main.ejs', 'utf-8');
 var sequence = fs.readFileSync('templates/child.ejs', 'utf-8');
 var exclusive = fs.readFileSync('templates/exclusive.ejs', 'utf-8');
 var parallel = fs.readFileSync('templates/parallel.ejs', 'utf-8');
 
+//Flow element object used to instatiate elements of the flow tree used to represent the bpmn model
 class FlowElement {
-    constructor(type, id, name, documentation, nextObjs){
+    constructor(type, id, name, documentation, nextObjs) {
         this.type = type;
         this.id = id;
         this.name = name;
@@ -25,127 +28,113 @@ const bpmnModdle = new BPMNModdle();
 const is = (element, type) => element.$instanceOf(type);
 
 bpmnModdle
-.fromXML(bpmnText)
-// , (err, definitions) => {
-//     console.log("xx");
-//     console.log(definitions);
-// })
-.then(bpmn => {
-    //console.log(bpmn.rootElement.rootElements[0].flowElements);
+    .fromXML(bpmnText)
+    // , (err, definitions) => {
+    //     console.log("xx");
+    //     console.log(definitions);
+    // })
+    .then(bpmn => {
+        //console.log(bpmn.rootElement.rootElements[0].flowElements);
+        let traverse = (curr, visited) => {
 
+        };
 
-    
-    let traverse = (curr, visited) => {
-        
-    };
+        //import of every single bpmn element in the model
+        let elements = bpmn.rootElement.rootElements[0].flowElements;
 
-    let elements = bpmn.rootElement.rootElements[0].flowElements;
+        //import of elements subdivided in categories, currently unused
+        let activities = elements.filter(e => is(e, "bpmn:Activity"));
+        let events = elements.filter(e => is(e, "bpmn:Event"));
+        let flows = elements.filter(e => is(e, "bpmn:SequenceFlow"));
+        let gateways = elements.filter(e => is(e, "bpmn:Gateway"))
 
-    let activities = elements.filter(e => is(e, "bpmn:Activity"));
-    let events = elements.filter(e => is(e, "bpmn:Event"));
-    let flows = elements.filter(e => is(e, "bpmn:SequenceFlow"));
-    let gateways = elements.filter(e => is(e, "bpmn:Gateway"))
+        //idMap has the element id, name, documentation and other information
+        let idMap = elements.filter(e => is(e, "bpmn:FlowNode")).reduce((acc, e) => { return { ...acc, [e.id]: e } }, {});
+        //adjList has the objects that are directly connected to the object you hand in as argument
+        let adjList = elements.filter(e => is(e, "bpmn:SequenceFlow")).reduce((acc, f) => { return { ...acc, [f.sourceRef.id]: [...(acc[f.sourceRef.id] || []), f.targetRef.id] } }, {});
 
-    //console.log("ACTIVITIES\n============\n", activities);
-    //console.log("EVENTS\n============\n", events);
-    //console.log("SEQUENCEFLOW\n========", flows);
+        //instantiation of the flowtree
+        let tree = Object.keys(adjList).map(f => new FlowElement(idMap[f].$type, idMap[f].id, idMap[f].name ? idMap[f].name : idMap[f].id, idMap[f].documentation ? idMap[f].documentation : null, adjList[f]));
+        //remove the first element since its always a start event
+        tree.shift()
+        //console.log(tree)
 
-    //flows.forEach(f => {console.log(f.sourceRef.id, "\t->\t", f.targetRef.id);});
-
-
-    let idMap = elements.filter(e => is(e, "bpmn:FlowNode")).reduce((acc, e) => { return {...acc, [e.id]: e} }, {});
-    let adjList = elements.filter(e => is(e, "bpmn:SequenceFlow")).reduce((acc, f) => { return {...acc, [f.sourceRef.id]: [...(acc[f.sourceRef.id] || []), f.targetRef.id]}}, {});
-
-    //console.log(idMap);
-    //console.log(adjList);
-
-    
-    let tree = Object.keys(adjList).map(f => new FlowElement(idMap[f].$type, idMap[f].id, idMap[f].name ? idMap[f].name : idMap[f].id, idMap[f].documentation ? idMap[f].documentation : null , adjList[f]));
-    //tree = new FlowElement(idMap['Event_1s935vj'].$type,idMap['Event_1s935vj'].id,idMap['Event_1s935vj'].name ? idMap['Event_1s935vj'].name : null,idMap['Event_1s935vj'].documentation ? idMap['Event_1s935vj'].documentation : null ,adjList['Event_1s935vj'])
-    tree.shift()
-    //console.log(tree)
-
-    tree.map(object => {
-        if (object.id[0] === 'A'){
-            object.nextObjs.map(next => {
-                if (next[0] === 'A'){
-                console.log(ejs.render(sequence, { parent: object, child: idMap[next]}));
-                }
-                else if (next[0] === 'G'){
-                    let len = adjList[next].length
-                    if(idMap[next].$type.split(":")[1][0] === 'E'){
-                        console.log(ejs.render(exclusive, {parent: object, child1: idMap[adjList[next][0]], child2: idMap[adjList[next][1]]}))
+        //BPMN -> DAML translator function, only does something when the object in turn is an activity
+        tree.map(object => {
+            if (object.id[0] === 'A') {
+                object.nextObjs.map(next => {
+                    var adjutants = Object.assign([], adjList[next])
+                    //if the next object in the flow is an activity, just print a simple DAML template pointing at it
+                    if (next[0] === 'A') {
+                        console.log(ejs.render(sequence, { parent: object, child: idMap[next] }));
                     }
-                    else if(idMap[next].$type.split(":")[1][0] === 'P'){
-                        if(adjList[next].length > 1){
-                            let children = []
-                            //console.log(idMap[adjList[next][1]].id)
-                            //console.log(adjList[idMap[adjList[next][1]].id])
-                            //console.log(ejs.render(parallel, {parent: object, child1: idMap[adjList[next][0]], child2: idMap[adjList[next][1]]}))
-                            for(let i = 0 ; i<len ; i++){
-                                if(idMap[adjList[next][i]].id[0] === 'G'){
-                                    let len2 = adjList[idMap[adjList[next][i]].id].length
-                                    if(len2 > 1){
-                                        for (let j = 0; j < len2 ; j++){
-                                            children.push(idMap[adjList[idMap[adjList[next][i]].id][j]])
+                    //if the next object in the flow is a gateway, check if there are more gateways and what the next activites are in the flow
+                    else if (next[0] === 'G') {
+                        let currentAdj = adjutants[0]
+                        let children = []
+                        let gonnaBreak = false
+                        while (currentAdj) {
+                            if (idMap[currentAdj].id[0] === 'G') {
+                                gonnaBreak = false
+                                let gatewayObj = idMap[currentAdj]
+                                let objs = []
+                                while (gatewayObj.id[0] === 'G') {
+                                    let len2 = adjList[gatewayObj.id].length
+                                    if (len2 > 1) {
+                                        for (let j = 0; j < len2; j++) {
+                                            if (idMap[adjList[gatewayObj.id]].id[0] === 'G') {
+                                                objs.push(idMap[adjList[gatewayObj.id][j]])
+                                            }
+                                            else {
+                                                children.push(idMap[adjList[gatewayObj.id][j]])
+                                            }
                                         }
                                     }
-                                    else{
-                                        children.push(idMap[adjList[idMap[adjList[next][i]].id][0]])
+                                    else {
+                                        if (idMap[adjList[gatewayObj.id][0]].id[0] === 'G') {
+                                            objs.push(idMap[adjList[gatewayObj.id][0]])
+                                        }
+                                        else {
+                                            children.push(idMap[adjList[gatewayObj.id][0]])
+                                        }
                                     }
-                                    continue
+                                    gatewayObj = objs.shift()
+                                    gonnaBreak = true
+                                    if (typeof (gatewayObj) === "undefined") break
                                 }
-                                children.push(idMap[adjList[next][i]])
+                                if (!gonnaBreak) {
+                                    children.push(idMap[currentAdj])
+                                }
                             }
-                            console.log(ejs.render(parallel, {parent: object, children: children}))
-                        }
-                        else{
-                            if(idMap[adjList[next][0]][0] === 'E'){
-                                console.log(ejs.render(pure, {activity: object}))
-                            }
-                            else{
-                                //console.log(idMap[adjList[next][0]])
-                                console.log(ejs.render(sequence, {parent: object, child: idMap[adjList[next][0]]}))
-                            }
+                            else {
+                                if (idMap[currentAdj][0] === 'E') {
+                                    console.log(ejs.render(pure, { activity: object }))
+                                }
+                                else {
+                                    children.push(idMap[currentAdj])
+                                }
 
+                            }
+                            adjutants.shift()
+                            currentAdj = adjutants[0]
                         }
+                        let numberOfElements = tree.find(x => x.id === next).nextObjs.length
+                        if(idMap[next].$type.split(":")[1][0] === 'E' && numberOfElements > 1){
+                            console.log(ejs.render(exclusive, { parent: object, children: children }))
+                        }
+                        else{ //if(idMap[next].$type.split(":")[1][0] === 'P')
+                            console.log(ejs.render(parallel, { parent: object, children: children }))
+                        }
+
                     }
-                }
-                else if (next[0] === 'E'){
-                    console.log(ejs.render(pure, {activity: object}))
-                }
-            });
-        }
-    });
-    
-    
-    //console.log(activities.map(a => ejs.render(template, { activity: a })).join("\n"))
-
-    /*
-    let b = activities.map(a => {
-        if (adjList[a.id][0][0] === 'A'){
-            console.log(ejs.render(sequence, {parent: idMap[adjList[a.id]], child: a}));
-        }
-        else if (adjList[a.id][0][0] === 'G'){
-            if(idMap[adjList[a.id]].$type.split(":")[1][0] === 'E'){
-                console.log(ejs.render(exclusive, {parent: a, child1: idMap[adjList[idMap[adjList[a.id]].id][0]], child2: idMap[adjList[idMap[adjList[a.id]].id][1]] }));
+                    //if the next object in the flow is an event, finish the template with a pure, it has no sons
+                    else if (next[0] === 'E') {
+                        console.log(ejs.render(pure, { activity: object }))
+                    }
+                });
             }
-            else if(idMap[adjList[a.id]].$type.split(":")[1][0] === 'P'){
-                if(adjList[idMap[adjList[a.id]].id].length > 1){
-                    console.log(ejs.render(parallel, {parent: a, child1: idMap[adjList[idMap[adjList[a.id]].id][0]], child2: idMap[adjList[idMap[adjList[a.id]].id][1]] }));
-                }
-            }
-        };
+        });
     });
-    */
-    
-
-   //console.log(adjList)
 
 
-    //console.log(ejs.render(template2, {parent: b, child: a}))
-});
-
-
-//console.log(ejs.render(template, { processName: 'Order to cash'}));
 
