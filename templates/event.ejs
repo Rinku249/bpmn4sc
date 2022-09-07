@@ -1,0 +1,14 @@
+template <%- parent.name %> with 
+<% children.forEach((child,index) => { -%>
+    child<%= index + 1 -%>: <%-child.name -%>  
+<% }) -%>
+
+
+<% events.forEach((event,index) => { -%>
+    choice <%-event.name -%>: ()
+    controller <%- parent.id %>
+    do
+        pure 
+        
+<% }) -%>
+            

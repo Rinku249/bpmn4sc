@@ -11,6 +11,7 @@ var pure = fs.readFileSync('templates/main.ejs', 'utf-8');
 var sequence = fs.readFileSync('templates/child.ejs', 'utf-8');
 var exclusive = fs.readFileSync('templates/exclusive.ejs', 'utf-8');
 var parallel = fs.readFileSync('templates/parallel.ejs', 'utf-8');
+var event = fs.readFileSync('templates/event.ejs', 'utf-8');
 
 //Flow element object used to instatiate elements of the flow tree used to represent the bpmn model
 class FlowElement {
@@ -52,7 +53,9 @@ bpmnModdle
         let idMap = elements.filter(e => is(e, "bpmn:FlowNode")).reduce((acc, e) => { return { ...acc, [e.id]: e } }, {});
         //adjList has the objects that are directly connected to the object you hand in as argument
         let adjList = elements.filter(e => is(e, "bpmn:SequenceFlow")).reduce((acc, f) => { return { ...acc, [f.sourceRef.id]: [...(acc[f.sourceRef.id] || []), f.targetRef.id] } }, {});
-
+        //lastobjs has a list of the objects that came right before the object you hand in as argument
+        let lastObjs = elements.filter(e =>is(e, "bpmn:SequenceFlow")).reduce((acc, l) => { return { ...acc, [l.targetRef.id]: [...(acc[l.targetRef.id] || []), l.sourceRef.id] } }, {});
+        console.log(lastObjs)
         //instantiation of the flowtree
         let tree = Object.keys(adjList).map(f => new FlowElement(idMap[f].$type, idMap[f].id, idMap[f].name ? idMap[f].name : idMap[f].id, idMap[f].documentation ? idMap[f].documentation : null, adjList[f]));
         //remove the first element since its always a start event
@@ -72,9 +75,10 @@ bpmnModdle
                     else if (next[0] === 'G') {
                         let currentAdj = adjutants[0]
                         let children = []
+                        let events = []
                         let gonnaBreak = false
                         while (currentAdj) {
-                            if (idMap[currentAdj].id[0] === 'G') {
+                            if (currentAdj[0] === 'G') {
                                 gonnaBreak = false
                                 let gatewayObj = idMap[currentAdj]
                                 let objs = []
@@ -107,8 +111,9 @@ bpmnModdle
                                 }
                             }
                             else {
-                                if (idMap[currentAdj][0] === 'E') {
-                                    console.log(ejs.render(pure, { activity: object }))
+                                if (currentAdj[0] === 'E') {
+                                    events.push(idMap[currentAdj])
+                                    adjutants.push(idMap[adjList[currentAdj][0]].id)
                                 }
                                 else {
                                     children.push(idMap[currentAdj])
@@ -119,13 +124,16 @@ bpmnModdle
                             currentAdj = adjutants[0]
                         }
                         let numberOfElements = tree.find(x => x.id === next).nextObjs.length
-                        if(idMap[next].$type.split(":")[1][0] === 'E' && numberOfElements > 1){
+                        if(idMap[next].$type.split(":")[1] === 'ExclusiveGateway' && numberOfElements > 1){
                             console.log(ejs.render(exclusive, { parent: object, children: children }))
                         }
-                        else{ //if(idMap[next].$type.split(":")[1][0] === 'P')
+                        else if(idMap[next].$type.split(":")[1][0] === 'P'){
                             console.log(ejs.render(parallel, { parent: object, children: children }))
                         }
-
+                        else if(idMap[next].$type.split(":")[1] === 'EventBasedGateway'){
+                            console.log(ejs.render(event, { parent: object, children: children, events: events}))
+                            //https://discuss.daml.com/t/experimental-bp-dsl/1185
+                        }
                     }
                     //if the next object in the flow is an event, finish the template with a pure, it has no sons
                     else if (next[0] === 'E') {
