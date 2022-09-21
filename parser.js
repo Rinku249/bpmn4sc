@@ -15,52 +15,52 @@ var event = fs.readFileSync('templates/event.ejs', 'utf-8');
 
 //Flow element object used to instatiate elements of the flow tree used to represent the bpmn model
 class FlowElement {
-    constructor(type, id, name, documentation, nextObjs) {
+    constructor(type, id, name, documentation, nextObjs, signatory) {
         this.type = type;
         this.id = id;
         this.name = name;
         this.documentation = documentation;
         this.nextObjs = nextObjs;
+        this.signatory = signatory;
     }
 }
 
 
 const bpmnModdle = new BPMNModdle();
 const is = (element, type) => element.$instanceOf(type);
-
-bpmnModdle
-    .fromXML(bpmnText)
-    // , (err, definitions) => {
-    //     console.log("xx");
-    //     console.log(definitions);
-    // })
-    .then(bpmn => {
+bpmnModdle.fromXML(bpmnText).then(bpmn => {
         //console.log(bpmn.rootElement.rootElements[0].flowElements);
         let traverse = (curr, visited) => {
 
         };
 
         //import of every single bpmn element in the model
-        let elements = bpmn.rootElement.rootElements[0].flowElements;
-
+        let rootElements = bpmn.rootElement.rootElements;
+        //console.log(rootElements[1].laneSets[0].lanes[0].flowNodeRefs)
+        //console.log(bpmn.references)
+        let process = rootElements.find(x => x.$type === "bpmn:Process");
+        let elements = process.flowElements;
+        //console.log(elements)
         //import of elements subdivided in categories, currently unused
         let activities = elements.filter(e => is(e, "bpmn:Activity"));
         let events = elements.filter(e => is(e, "bpmn:Event"));
         let flows = elements.filter(e => is(e, "bpmn:SequenceFlow"));
         let gateways = elements.filter(e => is(e, "bpmn:Gateway"))
-
+        let lanes = process.laneSets[0].lanes
+        let references = lanes.map(lane => bpmn.references.map(x => (x.element.id === lane.id) ? x.id : null));
+        references = references.map(lane => lane.filter(n => n));
         //idMap has the element id, name, documentation and other information
         let idMap = elements.filter(e => is(e, "bpmn:FlowNode")).reduce((acc, e) => { return { ...acc, [e.id]: e } }, {});
         //adjList has the objects that are directly connected to the object you hand in as argument
         let adjList = elements.filter(e => is(e, "bpmn:SequenceFlow")).reduce((acc, f) => { return { ...acc, [f.sourceRef.id]: [...(acc[f.sourceRef.id] || []), f.targetRef.id] } }, {});
         //lastobjs has a list of the objects that came right before the object you hand in as argument
         let lastObjs = elements.filter(e =>is(e, "bpmn:SequenceFlow")).reduce((acc, l) => { return { ...acc, [l.targetRef.id]: [...(acc[l.targetRef.id] || []), l.sourceRef.id] } }, {});
-        console.log(lastObjs)
+        //console.log(idMap)
         //instantiation of the flowtree
-        let tree = Object.keys(adjList).map(f => new FlowElement(idMap[f].$type, idMap[f].id, idMap[f].name ? idMap[f].name : idMap[f].id, idMap[f].documentation ? idMap[f].documentation : null, adjList[f]));
+        let tree = Object.keys(adjList).map(f => new FlowElement(idMap[f].$type, idMap[f].id, idMap[f].name ? idMap[f].name : idMap[f].id, idMap[f].documentation ? idMap[f].documentation : null, adjList[f], lanes[references.map(x => x.includes(idMap[f].id)).indexOf(true)].name));
         //remove the first element since its always a start event
         tree.shift()
-        //console.log(tree)
+        console.log(tree)
 
         //BPMN -> DAML translator function, only does something when the object in turn is an activity
         tree.map(object => {
