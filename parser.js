@@ -34,6 +34,7 @@ bpmnModdle.fromXML(bpmnText).then(bpmn => {
         let traverse = (curr, visited) => {
 
         };
+        let DAMLFileText = `module Main where\n\nimport Daml.Script\n\n`;
         let hasLanes = false;
         let lanes = undefined;
         let references = undefined;
@@ -70,7 +71,7 @@ bpmnModdle.fromXML(bpmnText).then(bpmn => {
             idMap[f].documentation ? idMap[f].documentation : null, 
             adjList[f],
             lastObjs[f],
-            hasLanes ? lanes[references.map(x => x.includes(idMap[f].id)).indexOf(true)].name : "default")
+            hasLanes ? lanes[references.map(x => x.includes(idMap[f].id)).indexOf(true)].name : "generic")
             );
         //remove the first element since its always a start event
         //console.log(tree)
@@ -83,6 +84,7 @@ bpmnModdle.fromXML(bpmnText).then(bpmn => {
                     var adjutants = Object.assign([], adjList[next])
                     //if the next object in the flow is an activity, just print a simple DAML template pointing at it
                     if (next[0] === 'A') {
+                        DAMLFileText += ejs.render(sequence, { parent: object, child: idMap[next], last: idMap[lastObjs[object.id][0]] })  + "\n\n"
                         console.log(ejs.render(sequence, { parent: object, child: idMap[next], last: idMap[lastObjs[object.id][0]] }));
                     }
                     //if the next object in the flow is a gateway, check if there are more gateways and what the next activites are in the flow
@@ -140,27 +142,47 @@ bpmnModdle.fromXML(bpmnText).then(bpmn => {
                         }
                         let numberOfElements = tree.find(x => x.id === next).nextObjs.length
                         if(idMap[next].$type.split(":")[1] === 'ExclusiveGateway' && numberOfElements > 1){
+                            DAMLFileText += ejs.render(exclusive, { parent: object, children: children, last: idMap[lastObjs[object.id][0]] })  + "\n\n"
                             console.log(ejs.render(exclusive, { parent: object, children: children, last: idMap[lastObjs[object.id][0]] }))
                         }
                         else if(idMap[next].$type.split(":")[1][0] === 'P'){
+                            DAMLFileText += ejs.render(parallel, { parent: object, children: children, last: idMap[lastObjs[object.id][0]] })  + "\n\n"
                             console.log(ejs.render(parallel, { parent: object, children: children, last: idMap[lastObjs[object.id][0]] }))
                         }
                         else if(idMap[next].$type.split(":")[1] === 'EventBasedGateway'){
+                            DAMLFileText += ejs.render(event, { parent: object, children: children, events: events, last: idMap[lastObjs[object.id][0]]})  + "\n\n"
                             console.log(ejs.render(event, { parent: object, children: children, events: events, last: idMap[lastObjs[object.id][0]]}))
                             //https://discuss.daml.com/t/experimental-bp-dsl/1185
                         }
                         else{
+                            DAMLFileText += ejs.render(sequence, { parent: object, child: children[0], last: idMap[lastObjs[object.id][0]]})  + "\n\n"
                             console.log(ejs.render(sequence, { parent: object, child: children[0], last: idMap[lastObjs[object.id][0]]}))
                         }
                     }
-                    //if the next object in the flow is an event, finish the template with a pure, it has no sons
+                    //if the next object in the flow is an event, finish the template without a choice?
                     else if (next[0] === 'E') {
-                        console.log(lastObjs[object])
+                        DAMLFileText += ejs.render(pure, { parent: object, last: idMap[lastObjs[object.id][0]] }) + "\n\n"
                         console.log(ejs.render(pure, { parent: object, last: idMap[lastObjs[object.id][0]] }))
                     }
                 });
             }
         });
+        fs.mkdir("daml_output/daml",{ recursive: true }, (err) => {
+            if (err){
+                throw err;
+            }
+            else{
+                fs.writeFile("daml_output/daml/Main.daml", DAMLFileText, (err2) => {if (err2) throw (err2)})
+                fs.writeFile("daml_output/daml.yaml",`sdk-version: 2.1.1
+name: project
+source: daml
+version: 0.0.1
+dependencies:
+    - daml-prim
+    - daml-stdlib
+    - daml-script`, (err2) => {if (err2) throw (err2)})
+            }
+        })
     });
 
 

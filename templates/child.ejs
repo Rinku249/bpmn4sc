@@ -1,19 +1,16 @@
 template <%= parent.id %> 
     with
-        <%= parent.signatory %> : party
-        done : bool
-        <%- last.id -%> : party
+        <%= parent.signatory %> : Party
+        done : Bool
+        last : <%- last.id %>
     where
         signatory <%= parent.signatory %>
         
         nonconsuming choice <%= child.id %> : ()
             controller <%= parent.signatory %>
             do
-                if <%= last.id %>.done then do
+                if last.done then do
                     let this.done = True
                     exercise self Archive
                 else do
                     return ()
-
-        
-

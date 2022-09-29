@@ -1,14 +1,7 @@
 template <%= parent.id %> 
     with
-        <%= parent.signatory %> : party
-        done : bool
-        <%- last.id -%> : party
+        <%= parent.signatory %> : Party
+        done : Bool
+        last : <%- last.id %>
     where
-        signatory <%= parent.signatory %>
-        
-        
-
-        
-
-
-        
+        signatory <%= parent.signatory %>    
