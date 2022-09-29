@@ -1,14 +1,19 @@
-template <%- parent.name %> with 
+template <%= parent.id %> 
+    with
+        <%= parent.signatory %> : party
+        done : bool
+        <%= last.signatory %> : party
+    where
+        signatory <%= parent.signatory %>
+
 <% children.forEach((child,index) => { -%>
-    child<%= index + 1 -%>: <%-child.name -%>  
-<% }) -%>
-
-
-<% events.forEach((event,index) => { -%>
-    choice <%-event.name -%>: ()
-    controller <%- parent.id %>
-    do
-        pure 
-        
+        nonconsuming choice <%-child.id -%>  : ()
+            controller <%= parent.signatory %>
+            do
+                if last.done then do
+                    let this.done = True
+                    exercise self Archive
+                else do
+                    return ()
 <% }) -%>
             

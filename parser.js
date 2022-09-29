@@ -15,12 +15,13 @@ var event = fs.readFileSync('templates/event.ejs', 'utf-8');
 
 //Flow element object used to instatiate elements of the flow tree used to represent the bpmn model
 class FlowElement {
-    constructor(type, id, name, documentation, nextObjs, signatory) {
+    constructor(type, id, name, documentation, nextObjs, lastObjs, signatory) {
         this.type = type;
         this.id = id;
         this.name = name;
         this.documentation = documentation;
         this.nextObjs = nextObjs;
+        this.lastObjs = lastObjs;
         this.signatory = signatory;
     }
 }
@@ -33,7 +34,9 @@ bpmnModdle.fromXML(bpmnText).then(bpmn => {
         let traverse = (curr, visited) => {
 
         };
-
+        let hasLanes = false;
+        let lanes = undefined;
+        let references = undefined;
         //import of every single bpmn element in the model
         let rootElements = bpmn.rootElement.rootElements;
         //console.log(rootElements[1].laneSets[0].lanes[0].flowNodeRefs)
@@ -45,31 +48,42 @@ bpmnModdle.fromXML(bpmnText).then(bpmn => {
         let activities = elements.filter(e => is(e, "bpmn:Activity"));
         let events = elements.filter(e => is(e, "bpmn:Event"));
         let flows = elements.filter(e => is(e, "bpmn:SequenceFlow"));
-        let gateways = elements.filter(e => is(e, "bpmn:Gateway"))
-        let lanes = process.laneSets[0].lanes
-        let references = lanes.map(lane => bpmn.references.map(x => (x.element.id === lane.id) ? x.id : null));
-        references = references.map(lane => lane.filter(n => n));
+        let gateways = elements.filter(e => is(e, "bpmn:Gateway"));
+        if(process.laneSets){
+            lanes = process.laneSets[0].lanes;
+            references = lanes.map(lane => bpmn.references.map(x => (x.element.id === lane.id) ? x.id : null));
+            references = references.map(lane => lane.filter(n => n));
+            hasLanes = true;
+        }
         //idMap has the element id, name, documentation and other information
         let idMap = elements.filter(e => is(e, "bpmn:FlowNode")).reduce((acc, e) => { return { ...acc, [e.id]: e } }, {});
         //adjList has the objects that are directly connected to the object you hand in as argument
         let adjList = elements.filter(e => is(e, "bpmn:SequenceFlow")).reduce((acc, f) => { return { ...acc, [f.sourceRef.id]: [...(acc[f.sourceRef.id] || []), f.targetRef.id] } }, {});
         //lastobjs has a list of the objects that came right before the object you hand in as argument
         let lastObjs = elements.filter(e =>is(e, "bpmn:SequenceFlow")).reduce((acc, l) => { return { ...acc, [l.targetRef.id]: [...(acc[l.targetRef.id] || []), l.sourceRef.id] } }, {});
-        //console.log(idMap)
+        //console.log(lastObjs)
         //instantiation of the flowtree
-        let tree = Object.keys(adjList).map(f => new FlowElement(idMap[f].$type, idMap[f].id, idMap[f].name ? idMap[f].name : idMap[f].id, idMap[f].documentation ? idMap[f].documentation : null, adjList[f], lanes[references.map(x => x.includes(idMap[f].id)).indexOf(true)].name));
+        //console.log(Object.keys(adjList))
+        let tree = Object.keys(adjList).map(f => new FlowElement(idMap[f].$type, 
+            idMap[f].id, 
+            idMap[f].name ? idMap[f].name : idMap[f].id, 
+            idMap[f].documentation ? idMap[f].documentation : null, 
+            adjList[f],
+            lastObjs[f],
+            hasLanes ? lanes[references.map(x => x.includes(idMap[f].id)).indexOf(true)].name : "default")
+            );
         //remove the first element since its always a start event
-        tree.shift()
-        console.log(tree)
+        //console.log(tree)
 
         //BPMN -> DAML translator function, only does something when the object in turn is an activity
         tree.map(object => {
+            //console.log(lastObjs[object.id])
             if (object.id[0] === 'A') {
                 object.nextObjs.map(next => {
                     var adjutants = Object.assign([], adjList[next])
                     //if the next object in the flow is an activity, just print a simple DAML template pointing at it
                     if (next[0] === 'A') {
-                        console.log(ejs.render(sequence, { parent: object, child: idMap[next] }));
+                        console.log(ejs.render(sequence, { parent: object, child: idMap[next], last: idMap[lastObjs[object.id][0]] }));
                     }
                     //if the next object in the flow is a gateway, check if there are more gateways and what the next activites are in the flow
                     else if (next[0] === 'G') {
@@ -111,7 +125,8 @@ bpmnModdle.fromXML(bpmnText).then(bpmn => {
                                 }
                             }
                             else {
-                                if (currentAdj[0] === 'E') {
+                                //console.log(object.id + "->" + currentAdj)
+                                if (idMap[currentAdj].$type === "bpmn:IntermediateCatchEvent") {
                                     events.push(idMap[currentAdj])
                                     adjutants.push(idMap[adjList[currentAdj][0]].id)
                                 }
@@ -125,19 +140,23 @@ bpmnModdle.fromXML(bpmnText).then(bpmn => {
                         }
                         let numberOfElements = tree.find(x => x.id === next).nextObjs.length
                         if(idMap[next].$type.split(":")[1] === 'ExclusiveGateway' && numberOfElements > 1){
-                            console.log(ejs.render(exclusive, { parent: object, children: children }))
+                            console.log(ejs.render(exclusive, { parent: object, children: children, last: idMap[lastObjs[object.id][0]] }))
                         }
                         else if(idMap[next].$type.split(":")[1][0] === 'P'){
-                            console.log(ejs.render(parallel, { parent: object, children: children }))
+                            console.log(ejs.render(parallel, { parent: object, children: children, last: idMap[lastObjs[object.id][0]] }))
                         }
                         else if(idMap[next].$type.split(":")[1] === 'EventBasedGateway'){
-                            console.log(ejs.render(event, { parent: object, children: children, events: events}))
+                            console.log(ejs.render(event, { parent: object, children: children, events: events, last: idMap[lastObjs[object.id][0]]}))
                             //https://discuss.daml.com/t/experimental-bp-dsl/1185
+                        }
+                        else{
+                            console.log(ejs.render(sequence, { parent: object, child: children[0], last: idMap[lastObjs[object.id][0]]}))
                         }
                     }
                     //if the next object in the flow is an event, finish the template with a pure, it has no sons
                     else if (next[0] === 'E') {
-                        console.log(ejs.render(pure, { activity: object }))
+                        console.log(lastObjs[object])
+                        console.log(ejs.render(pure, { parent: object, last: idMap[lastObjs[object.id][0]] }))
                     }
                 });
             }

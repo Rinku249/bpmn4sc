@@ -1,2 +1,14 @@
-template <%= activity.name %> with
-    pure
+template <%= parent.id %> 
+    with
+        <%= parent.signatory %> : party
+        done : bool
+        <%- last.id -%> : party
+    where
+        signatory <%= parent.signatory %>
+        
+        
+
+        
+
+
+        
