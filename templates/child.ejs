@@ -1,16 +1,10 @@
 template <%= parent.id %> 
     with
-        <%= parent.signatory %> : Party
-        done : Bool
-        last : <%- last.id %>
+        <%= parent.documentation %>
     where
         signatory <%= parent.signatory %>
         
-        nonconsuming choice <%= child.id %> : ()
+        nonconsuming choice <%= parent.name.replaceAll(" ","") %> : ContractId <%= child.Id %>
             controller <%= parent.signatory %>
             do
-                if last.done then do
-                    let this.done = True
-                    exercise self Archive
-                else do
-                    return ()
+                create <%= child.Id %> with
