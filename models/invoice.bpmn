@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_1sw5ulc" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.2.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.0.0">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_1sw5ulc" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.1.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.0.0">
   <bpmn:collaboration id="Collaboration_1a6486d">
     <bpmn:participant id="Participant_190troa" name="Order to Cash" processRef="Process_0krw6e5" />
   </bpmn:collaboration>
@@ -71,7 +71,11 @@ supplier : Party</bpmn:documentation>
       <bpmn:messageEventDefinition id="MessageEventDefinition_0ayp31b" />
     </bpmn:intermediateCatchEvent>
     <bpmn:task id="Activity_1uynh20" name="Goods Shipment">
-      <bpmn:documentation>hola</bpmn:documentation>
+      <bpmn:documentation>info : Text
+cost : Decimal
+customer : Party
+supplier : Party
+carrier : Party</bpmn:documentation>
       <bpmn:incoming>Flow_0y9ikrt</bpmn:incoming>
       <bpmn:outgoing>Flow_1wwsyln</bpmn:outgoing>
     </bpmn:task>
@@ -81,12 +85,19 @@ supplier : Party</bpmn:documentation>
       <bpmn:outgoing>Flow_14tnvqp</bpmn:outgoing>
     </bpmn:parallelGateway>
     <bpmn:task id="Activity_0af8eeg" name="Issue Invoice for customer">
-      <bpmn:documentation>hola</bpmn:documentation>
+      <bpmn:documentation>info : Text
+cost : Decimal
+customer : Party
+supplier : Party
+carrier : Party</bpmn:documentation>
       <bpmn:incoming>Flow_1qdjaxe</bpmn:incoming>
       <bpmn:outgoing>Flow_1vvdj2z</bpmn:outgoing>
     </bpmn:task>
     <bpmn:task id="Activity_0y4exel" name="Issue Invoice for supplier">
-      <bpmn:documentation>hola</bpmn:documentation>
+      <bpmn:documentation>info : Text
+cost : Decimal
+supplier : Party
+carrier : Party</bpmn:documentation>
       <bpmn:incoming>Flow_14tnvqp</bpmn:incoming>
       <bpmn:outgoing>Flow_1c645r8</bpmn:outgoing>
     </bpmn:task>
@@ -96,7 +107,11 @@ supplier : Party</bpmn:documentation>
       <bpmn:outgoing>Flow_075rtm1</bpmn:outgoing>
     </bpmn:exclusiveGateway>
     <bpmn:task id="Activity_1rp486m" name="Approve invoice from carrier">
-      <bpmn:documentation>hola</bpmn:documentation>
+      <bpmn:documentation>info : Text
+information : Text
+cost : Decimal
+supplier : Party
+carrier : Party</bpmn:documentation>
       <bpmn:incoming>Flow_075rtm1</bpmn:incoming>
       <bpmn:outgoing>Flow_0utvz4x</bpmn:outgoing>
     </bpmn:task>
@@ -106,7 +121,11 @@ supplier : Party</bpmn:documentation>
       <bpmn:outgoing>Flow_0s2kkac</bpmn:outgoing>
     </bpmn:exclusiveGateway>
     <bpmn:task id="Activity_04hi538" name="Resend invoice to supplier">
-      <bpmn:documentation>hola</bpmn:documentation>
+      <bpmn:documentation>info : Text
+reason : Text
+cost : Decimal
+supplier : Party
+carrier : Party</bpmn:documentation>
       <bpmn:incoming>Flow_0lmepow</bpmn:incoming>
       <bpmn:outgoing>Flow_0ipoabt</bpmn:outgoing>
     </bpmn:task>
@@ -114,7 +133,12 @@ supplier : Party</bpmn:documentation>
       <bpmn:incoming>Flow_0s2kkac</bpmn:incoming>
     </bpmn:endEvent>
     <bpmn:task id="Activity_0y4xu4j" name="Approve invoice from supplier">
-      <bpmn:documentation>hola</bpmn:documentation>
+      <bpmn:documentation>info : Text
+information : Text
+cost : Decimal
+customer : Party
+supplier : Party
+carrier : Party</bpmn:documentation>
       <bpmn:incoming>Flow_0p91z7o</bpmn:incoming>
       <bpmn:outgoing>Flow_1eyq17q</bpmn:outgoing>
     </bpmn:task>
@@ -132,7 +156,12 @@ supplier : Party</bpmn:documentation>
       <bpmn:outgoing>Flow_0p91z7o</bpmn:outgoing>
     </bpmn:exclusiveGateway>
     <bpmn:task id="Activity_0g142tl" name="Resend invoice to customer">
-      <bpmn:documentation>hola</bpmn:documentation>
+      <bpmn:documentation>info : Text
+reason : Text
+cost : Decimal
+customer : Party
+supplier : Party
+carrier : Party</bpmn:documentation>
       <bpmn:incoming>Flow_0l8izxs</bpmn:incoming>
       <bpmn:outgoing>Flow_0knwc1t</bpmn:outgoing>
     </bpmn:task>

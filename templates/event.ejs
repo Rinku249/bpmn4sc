@@ -1,17 +1,29 @@
 template <%= parent.id %> 
     with
-        <%= parent.signatory %> : Party
-        done : Bool
-        last : <%- last.id %>
+        <%= parent.documentation %>
     where
         signatory <%= parent.signatory %>
 
-<% children.forEach((child,index) => { %>
-        nonconsuming choice <%-child.id -%>  : ()
+<% events.forEach((event,index) => { -%>
+    <% if (children[index].length === 1) { %>
+        nonconsuming choice <%= event.name.replaceAll(" ","") %> : ()
             controller <%= parent.signatory %>
             do
-                if last.done then do
-                    let this.done = True
-                    exercise self Archive
-                else do
-                    return ()<% }) %>    
+                return ()
+            <% "\r" -%>
+    <% } else {-%>
+        <%- "\r\t\t" %>nonconsuming choice <%= event.name.replaceAll(" ","") %> : ContractId <%= children[index][0].id %>
+        <% if (!children[index][3]) { -%>
+    with
+            <% children[index][2].forEach((child,index2) => { -%>
+    <%-child.split(" :")[0] %> = <%-child.split(" :")[0] %>
+            <% }) %><% } -%>
+controller <%= parent.signatory %>
+            do
+                create <%- children[index][0].id -%> with
+                    <% children[index][1].forEach((child,index2) => { -%>
+<%-child.split(" :")[0] %> = <%-child.split(" :")[0] -%> 
+                    <% }) -%><% if (!children[index][3]) { -%><% children[index][2].forEach((child,index2) => { -%>
+<%-child.split(" :")[0] %> = <%-child.split(" :")[0] %>
+                <% }) %><% } -%><% }-%> <% })-%>
+                    

@@ -4,7 +4,17 @@ template <%= parent.id %>
     where
         signatory <%= parent.signatory %>
         
-        nonconsuming choice <%= parent.name.replaceAll(" ","") %> : ContractId <%= child.Id %>
+        nonconsuming choice <%= parent.name.replaceAll(" ","") %> : ContractId <%= child.id -%>
+        <% if (!equal) { -%><% "\r" %>
+            with
+                <% withs.forEach((child,index) => { -%>
+<%-child.split(" :")[0] %> = <%-child.split(" :")[0] %> <% }) -%> <% } %>
             controller <%= parent.signatory %>
             do
-                create <%= child.Id %> with
+                create <%- child.id %> with
+            <% thisReq.forEach((child,index) => { -%>
+        <%= child.split(" :")[0] %> = <%-child.split(" :")[0] -%> 
+            <% }) -%><% if (!equal) { -%><% withs.forEach((child,index) => { -%>
+        <%= child.split(" :")[0] -%> = <%-child.split(" :")[0] -%>
+                    <% }) %>
+        <% } %>

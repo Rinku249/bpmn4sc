@@ -85,17 +85,15 @@ bpmnModdle.fromXML(bpmnText).then(bpmn => {
                     //if the next object in the flow is an activity, just print a simple DAML template pointing at it
                     if (next[0] === 'A') {
                         let thisChild = tree.find(x => x.id === next)
-                        let thisParent = tree.find(x => x.id === idMap[lastObjs[object.id][0]].id)
                         let thisReq = object.documentation.split("\n\t\t")
                         let nextReq = thisChild.documentation.split("\n\t\t")
+                        let difReq = nextReq.filter(x => !thisReq.includes(x))
+                        let sameReq = thisReq.filter(x => nextReq.includes(x))
                         let equal = true
-                        thisReq.forEach(function (value, i) {
-                            if (value != nextReq[i]){
-                                equal = false
-                            }
-                        })
-                        console.log(equal)
-                        DAMLFileText += ejs.render(sequence, { parent: object, child: thisChild, last: thisParent, thisReq: thisReq, nextReq: nextReq, equal:equal })  + "\n\n"
+                        if(difReq.length){
+                            equal = false
+                        }
+                        DAMLFileText += ejs.render(sequence, { parent: object, child: thisChild, thisReq: sameReq, withs: difReq, equal:equal })
                         //console.log(ejs.render(sequence, { parent: object, child: thisChild, last: thisParent }));
                     }
                     //if the next object in the flow is a gateway, check if there are more gateways and what the next activites are in the flow
@@ -151,22 +149,39 @@ bpmnModdle.fromXML(bpmnText).then(bpmn => {
                             adjutants.shift()
                             currentAdj = adjutants[0]
                         }
+                        let childReqs = children.map(child => {
+                            let thisChild = tree.find(x => x.id === child.id)
+                            if(!thisChild){
+                                return [child]
+                            }
+                            else{
+                                let thisReq = object.documentation.split("\n\t\t")
+                                let nextReq = thisChild.documentation.split("\n\t\t")
+                                let difReq = nextReq.filter(x => !thisReq.includes(x))
+                                let sameReq = thisReq.filter(x => nextReq.includes(x))
+                                let equal = true
+                                if(difReq.length){
+                                    equal = false
+                                }
+                                return [thisChild, sameReq, difReq, equal]
+                            }
+                        })
                         let numberOfElements = tree.find(x => x.id === next).nextObjs.length
                         if(idMap[next].$type.split(":")[1] === 'ExclusiveGateway' && numberOfElements > 1){
-                            DAMLFileText += ejs.render(exclusive, { parent: object, children: children, last: idMap[lastObjs[object.id][0]] })  + "\n\n"
+                            //DAMLFileText += ejs.render(exclusive, { parent: object, children: childReqs})
                             //console.log(ejs.render(exclusive, { parent: object, children: children, last: idMap[lastObjs[object.id][0]] }))
                         }
                         else if(idMap[next].$type.split(":")[1][0] === 'P'){
-                            DAMLFileText += ejs.render(parallel, { parent: object, children: children, last: idMap[lastObjs[object.id][0]] })  + "\n\n"
+                            //DAMLFileText += ejs.render(parallel, { parent: object, children: children})
                             //console.log(ejs.render(parallel, { parent: object, children: children, last: idMap[lastObjs[object.id][0]] }))
                         }
                         else if(idMap[next].$type.split(":")[1] === 'EventBasedGateway'){
-                            DAMLFileText += ejs.render(event, { parent: object, children: children, events: events, last: idMap[lastObjs[object.id][0]]})  + "\n\n"
+                            DAMLFileText += ejs.render(event, { parent: object, children: childReqs, events: events})
                             //console.log(ejs.render(event, { parent: object, children: children, events: events, last: idMap[lastObjs[object.id][0]]}))
                             //https://discuss.daml.com/t/experimental-bp-dsl/1185
                         }
                         else{
-                            DAMLFileText += ejs.render(sequence, { parent: object, child: children[0], last: idMap[lastObjs[object.id][0]]})  + "\n\n"
+                            //DAMLFileText += ejs.render(sequence, { parent: object, child: childReqs[0][0], thisReq: childReqs[0][1], withs: childReqs[0][2], equal:childReqs[0][3] })
                             //console.log(ejs.render(sequence, { parent: object, child: children[0], last: idMap[lastObjs[object.id][0]]}))
                         }
                     }
