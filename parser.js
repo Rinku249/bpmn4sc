@@ -168,12 +168,12 @@ bpmnModdle.fromXML(bpmnText).then(bpmn => {
                         })
                         let numberOfElements = tree.find(x => x.id === next).nextObjs.length
                         if(idMap[next].$type.split(":")[1] === 'ExclusiveGateway' && numberOfElements > 1){
-                            //DAMLFileText += ejs.render(exclusive, { parent: object, children: childReqs})
+                            DAMLFileText += ejs.render(exclusive, { parent: object, children: childReqs})
                             //console.log(ejs.render(exclusive, { parent: object, children: children, last: idMap[lastObjs[object.id][0]] }))
                         }
                         else if(idMap[next].$type.split(":")[1][0] === 'P'){
-                            //DAMLFileText += ejs.render(parallel, { parent: object, children: children})
-                            //console.log(ejs.render(parallel, { parent: object, children: children, last: idMap[lastObjs[object.id][0]] }))
+                            DAMLFileText += ejs.render(parallel, { parent: object, children: childReqs})
+                            //console.log(ejs.render(parallel, { parent: object, children: children}))
                         }
                         else if(idMap[next].$type.split(":")[1] === 'EventBasedGateway'){
                             DAMLFileText += ejs.render(event, { parent: object, children: childReqs, events: events})
@@ -181,7 +181,7 @@ bpmnModdle.fromXML(bpmnText).then(bpmn => {
                             //https://discuss.daml.com/t/experimental-bp-dsl/1185
                         }
                         else{
-                            //DAMLFileText += ejs.render(sequence, { parent: object, child: childReqs[0][0], thisReq: childReqs[0][1], withs: childReqs[0][2], equal:childReqs[0][3] })
+                            DAMLFileText += ejs.render(sequence, { parent: object, child: childReqs[0][0], thisReq: childReqs[0][1], withs: childReqs[0][2], equal:childReqs[0][3] })
                             //console.log(ejs.render(sequence, { parent: object, child: children[0], last: idMap[lastObjs[object.id][0]]}))
                         }
                     }

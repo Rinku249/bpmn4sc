@@ -8,7 +8,8 @@ template <%= parent.id %>
         <% if (!equal) { -%><% "\r" %>
             with
                 <% withs.forEach((child,index) => { -%>
-<%-child.split(" :")[0] %> = <%-child.split(" :")[0] %> <% }) -%> <% } %>
+<%-child%> 
+                <% }) -%> <% } %>
             controller <%= parent.signatory %>
             do
                 create <%- child.id %> with

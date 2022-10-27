@@ -1,7 +1,11 @@
 template <%= parent.id %> 
     with
-        <%= parent.signatory %> : Party
-        done : Bool
-        last : <%- last.id %>
+        <%= parent.documentation %>
     where
-        signatory <%= parent.signatory %>    
+        signatory <%= parent.signatory %>
+        
+        nonconsuming choice <%= parent.name.replaceAll(" ","") %> : ()
+            controller <%= parent.signatory %>
+            do
+                return ()
+        

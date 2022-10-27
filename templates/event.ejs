@@ -12,11 +12,11 @@ template <%= parent.id %>
                 return ()
             <% "\r" -%>
     <% } else {-%>
-        <%- "\r\t\t" %>nonconsuming choice <%= event.name.replaceAll(" ","") %> : ContractId <%= children[index][0].id %>
+        <%- "\r\t" %>nonconsuming choice <%= event.name.replaceAll(" ","") %> : ContractId <%= children[index][0].id %>
         <% if (!children[index][3]) { -%>
     with
             <% children[index][2].forEach((child,index2) => { -%>
-    <%-child.split(" :")[0] %> = <%-child.split(" :")[0] %>
+    <%-child%>  
             <% }) %><% } -%>
 controller <%= parent.signatory %>
             do
