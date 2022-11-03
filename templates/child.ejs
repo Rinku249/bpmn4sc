@@ -6,16 +6,14 @@ template <%= parent.id %>
         
         nonconsuming choice <%= parent.name.replaceAll(" ","") %> : ContractId <%= child.id -%>
         <% if (!equal) { -%><% "\r" %>
-            with
-                <% withs.forEach((child,index) => { -%>
-<%-child%> 
-                <% }) -%> <% } %>
+            with<% withs.forEach((child,index) => { -%><%= "\r\t\t\t\t" + child%><% }) -%>
+            <% } %>
             controller <%= parent.signatory %>
             do
                 create <%- child.id %> with
             <% thisReq.forEach((child,index) => { -%>
         <%= child.split(" :")[0] %> = <%-child.split(" :")[0] -%> 
             <% }) -%><% if (!equal) { -%><% withs.forEach((child,index) => { -%>
-        <%= child.split(" :")[0] -%> = <%-child.split(" :")[0] -%>
-                    <% }) %>
+        <%= child.split(" :")[0] -%> = <%-child.split(" :")[0] %>
+            <% }) -%>
         <% } %>

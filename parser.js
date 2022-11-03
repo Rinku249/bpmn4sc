@@ -192,6 +192,10 @@ bpmnModdle.fromXML(bpmnText).then(bpmn => {
                     }
                 });
             }
+            if (object.id[0] === 'M'){
+                let multiProcess = process.flowElements.find(x => x.id === object.id)
+                console.log(multiProcess.flowElements)
+            }
         });
         fs.mkdir("daml_output/daml",{ recursive: true }, (err) => {
             if (err){

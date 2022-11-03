@@ -18,7 +18,6 @@
         <bpmn:flowNodeRef>Event_01ku89i</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Event_1tg7xv8</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Event_1vix9gk</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Activity_1uynh20</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Gateway_15pdwah</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Activity_0af8eeg</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Activity_1rp486m</bpmn:flowNodeRef>
@@ -26,6 +25,7 @@
         <bpmn:flowNodeRef>Event_1gijo3h</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Gateway_0up5v5m</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Activity_0g142tl</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_1uynh20</bpmn:flowNodeRef>
       </bpmn:lane>
       <bpmn:lane id="Lane_1t76src" name="carrier">
         <bpmn:flowNodeRef>Activity_0y4exel</bpmn:flowNodeRef>
@@ -70,15 +70,6 @@ supplier : Party</bpmn:documentation>
       <bpmn:outgoing>Flow_0y9ikrt</bpmn:outgoing>
       <bpmn:messageEventDefinition id="MessageEventDefinition_0ayp31b" />
     </bpmn:intermediateCatchEvent>
-    <bpmn:task id="Activity_1uynh20" name="Goods Shipment">
-      <bpmn:documentation>info : Text
-cost : Decimal
-customer : Party
-supplier : Party
-carrier : Party</bpmn:documentation>
-      <bpmn:incoming>Flow_0y9ikrt</bpmn:incoming>
-      <bpmn:outgoing>Flow_1wwsyln</bpmn:outgoing>
-    </bpmn:task>
     <bpmn:parallelGateway id="Gateway_15pdwah">
       <bpmn:incoming>Flow_1wwsyln</bpmn:incoming>
       <bpmn:outgoing>Flow_1qdjaxe</bpmn:outgoing>
@@ -187,23 +178,32 @@ carrier : Party</bpmn:documentation>
     <bpmn:sequenceFlow id="Flow_0l8izxs" sourceRef="Gateway_0vsx4nj" targetRef="Activity_0g142tl" />
     <bpmn:sequenceFlow id="Flow_1bvged5" sourceRef="Gateway_0vsx4nj" targetRef="Event_0u52olj" />
     <bpmn:sequenceFlow id="Flow_1vvdj2z" sourceRef="Activity_0af8eeg" targetRef="Gateway_0up5v5m" />
+    <bpmn:task id="Activity_1uynh20" name="Goods Shipment">
+      <bpmn:documentation>info : Text
+cost : Decimal
+customer : Party
+supplier : Party
+carrier : Party</bpmn:documentation>
+      <bpmn:incoming>Flow_0y9ikrt</bpmn:incoming>
+      <bpmn:outgoing>Flow_1wwsyln</bpmn:outgoing>
+    </bpmn:task>
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_1a6486d">
       <bpmndi:BPMNShape id="Participant_190troa_di" bpmnElement="Participant_190troa" isHorizontal="true">
-        <dc:Bounds x="150" y="80" width="1450" height="645" />
+        <dc:Bounds x="150" y="80" width="1460" height="645" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Lane_1t76src_di" bpmnElement="Lane_1t76src" isHorizontal="true">
-        <dc:Bounds x="180" y="531" width="1420" height="194" />
+        <dc:Bounds x="180" y="531" width="1430" height="194" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Lane_19m0gxb_di" bpmnElement="Lane_19m0gxb" isHorizontal="true">
-        <dc:Bounds x="180" y="257" width="1420" height="274" />
+        <dc:Bounds x="180" y="257" width="1430" height="274" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Lane_0ge22hd_di" bpmnElement="Lane_0ge22hd" isHorizontal="true">
-        <dc:Bounds x="180" y="80" width="1420" height="177" />
+        <dc:Bounds x="180" y="80" width="1430" height="177" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_1vvdj2z_di" bpmnElement="Flow_1vvdj2z">
@@ -333,10 +333,6 @@ carrier : Party</bpmn:documentation>
           <dc:Bounds x="660" y="465" width="61" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Activity_1uynh20_di" bpmnElement="Activity_1uynh20">
-        <dc:Bounds x="740" y="400" width="100" height="80" />
-        <bpmndi:BPMNLabel />
-      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Gateway_1s13fy0_di" bpmnElement="Gateway_15pdwah">
         <dc:Bounds x="875" y="415" width="50" height="50" />
       </bpmndi:BPMNShape>
@@ -387,6 +383,9 @@ carrier : Party</bpmn:documentation>
       <bpmndi:BPMNShape id="BPMNShape_1ck23yl" bpmnElement="Activity_0g142tl">
         <dc:Bounds x="1320" y="280" width="100" height="80" />
         <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_002zcy5_di" bpmnElement="Activity_1uynh20">
+        <dc:Bounds x="740" y="400" width="100" height="80" />
       </bpmndi:BPMNShape>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
