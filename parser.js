@@ -79,260 +79,196 @@ bpmnModdle.fromXML(bpmnText).then(bpmn => {
         //console.log(tree)
 
         //BPMN -> DAML translator function, only does something when the object in turn is an activity
-        tree.map(object => {
-            //console.log(lastObjs[object.id])
-            if (object.id[0] === 'A') {
-                object.nextObjs.map(next => {
-                    var adjutants = Object.assign([], adjList[next])
-                    //if the next object in the flow is an activity, just print a simple DAML template pointing at it
-                    if (next[0] === 'A') {
-                        let thisChild = tree.find(x => x.id === next)
-                        let thisReq = object.documentation.split("\n\t\t")
-                        let nextReq = thisChild.documentation.split("\n\t\t")
-                        let difReq = nextReq.filter(x => !thisReq.includes(x))
-                        let sameReq = thisReq.filter(x => nextReq.includes(x))
-                        let equal = true
-                        if(difReq.length){
-                            equal = false
-                        }
-                        DAMLFileText += ejs.render(sequence, { parent: object, child: thisChild, thisReq: sameReq, withs: difReq, equal:equal })
-                        //console.log(ejs.render(sequence, { parent: object, child: thisChild, last: thisParent }));
-                    }
-                    //if the next object in the flow is a gateway, check if there are more gateways and what the next activites are in the flow
-                    else if (next[0] === 'G') {
-                        let currentAdj = adjutants[0]
-                        let children = []
-                        let events = []
-                        let gonnaBreak = false
-                        while (currentAdj) {
-                            if (currentAdj[0] === 'G') {
-                                gonnaBreak = false
-                                let gatewayObj = idMap[currentAdj]
-                                let objs = []
-                                while (gatewayObj.id[0] === 'G') {
-                                    let len2 = adjList[gatewayObj.id].length
-                                    if (len2 > 1) {
-                                        for (let j = 0; j < len2; j++) {
-                                            if (idMap[adjList[gatewayObj.id]].id[0] === 'G') {
-                                                objs.push(idMap[adjList[gatewayObj.id][j]])
-                                            }
-                                            else {
-                                                children.push(idMap[adjList[gatewayObj.id][j]])
-                                            }
-                                        }
-                                    }
-                                    else {
-                                        if (idMap[adjList[gatewayObj.id][0]].id[0] === 'G') {
-                                            objs.push(idMap[adjList[gatewayObj.id][0]])
-                                        }
-                                        else {
-                                            children.push(idMap[adjList[gatewayObj.id][0]])
-                                        }
-                                    }
-                                    gatewayObj = objs.shift()
-                                    gonnaBreak = true
-                                    if (typeof (gatewayObj) === "undefined") break
-                                }
-                                if (!gonnaBreak) {
-                                    children.push(idMap[currentAdj])
-                                }
+        function BPMN2Text(tree, idMap, adjList, lastObjs, DAMLFileText, recursion){
+            let removed = undefined
+            for (let i = 0; i<tree.length; i++){
+                let object = tree[i]
+                if (object.id[0] === 'A') {
+                    let temp = object.nextObjs
+                    for (let j = 0; j<temp.length;j++){
+                        let next = temp[j]
+                        var adjutants = Object.assign([], adjList[next])
+                        //if the next object in the flow is an activity, just print a simple DAML template pointing at it
+                        if (next[0] === 'A') {
+                            let thisChild = tree.find(x => x.id === next)
+                            let thisReq = object.documentation.split("\n\t\t")
+                            let nextReq = thisChild.documentation.split("\n\t\t")
+                            let difReq = nextReq.filter(x => !thisReq.includes(x))
+                            let sameReq = thisReq.filter(x => nextReq.includes(x))
+                            let equal = true
+                            if(difReq.length){
+                                equal = false
                             }
-                            else {
-                                //console.log(object.id + "->" + currentAdj)
-                                if (idMap[currentAdj].$type === "bpmn:IntermediateCatchEvent") {
-                                    events.push(idMap[currentAdj])
-                                    adjutants.push(idMap[adjList[currentAdj][0]].id)
-                                }
-                                else {
-                                    children.push(idMap[currentAdj])
-                                }
+                            if (object.lastObjs[0][0] === "M"){
 
                             }
-                            adjutants.shift()
-                            currentAdj = adjutants[0]
-                        }
-                        let childReqs = children.map(child => {
-                            let thisChild = tree.find(x => x.id === child.id)
-                            if(!thisChild){
-                                return [child]
-                            }
                             else{
-                                let thisReq = object.documentation.split("\n\t\t")
-                                let nextReq = thisChild.documentation.split("\n\t\t")
-                                let difReq = nextReq.filter(x => !thisReq.includes(x))
-                                let sameReq = thisReq.filter(x => nextReq.includes(x))
-                                let equal = true
-                                if(difReq.length){
-                                    equal = false
-                                }
-                                return [thisChild, sameReq, difReq, equal]
+                                DAMLFileText += ejs.render(sequence, { parent: object, child: thisChild, thisReq: sameReq, withs: difReq, equal:equal })
                             }
-                        })
-                        let numberOfElements = tree.find(x => x.id === next).nextObjs.length
-                        if(idMap[next].$type.split(":")[1] === 'ExclusiveGateway' && numberOfElements > 1){
-                            DAMLFileText += ejs.render(exclusive, { parent: object, children: childReqs})
-                            //console.log(ejs.render(exclusive, { parent: object, children: children, last: idMap[lastObjs[object.id][0]] }))
+                            //console.log(ejs.render(sequence, { parent: object, child: thisChild, last: thisParent }));
                         }
-                        else if(idMap[next].$type.split(":")[1][0] === 'P'){
-                            DAMLFileText += ejs.render(parallel, { parent: object, children: childReqs})
-                            //console.log(ejs.render(parallel, { parent: object, children: children}))
-                        }
-                        else if(idMap[next].$type.split(":")[1] === 'EventBasedGateway'){
-                            DAMLFileText += ejs.render(event, { parent: object, children: childReqs, events: events})
-                            //console.log(ejs.render(event, { parent: object, children: children, events: events, last: idMap[lastObjs[object.id][0]]}))
-                            //https://discuss.daml.com/t/experimental-bp-dsl/1185
-                        }
-                        else{
-                            DAMLFileText += ejs.render(sequence, { parent: object, child: childReqs[0][0], thisReq: childReqs[0][1], withs: childReqs[0][2], equal:childReqs[0][3] })
-                            //console.log(ejs.render(sequence, { parent: object, child: children[0], last: idMap[lastObjs[object.id][0]]}))
-                        }
-                    }
-                    //if the next object in the flow is an event, finish the template without a choice?
-                    else if (next[0] === 'E') {
-                        DAMLFileText += ejs.render(pure, { parent: object, last: idMap[lastObjs[object.id][0]] }) + "\n\n"
-                        //console.log(ejs.render(pure, { parent: object, last: idMap[lastObjs[object.id][0]] }))
-                    }
-                });
-            }
-            if (object.id[0] === 'M'){
-                let multiProcess = process.flowElements.find(x => x.id === object.id)
-                multiProcess = multiProcess.flowElements
-                let endEvents2 = multiProcess.filter(e => e.$type === "bpmn:EndEvent")
-                let endEventsIds2 = endEvents2.map(x => x.id)
-                let idMap2 = multiProcess.filter(e => is(e, "bpmn:FlowNode")).reduce((acc, e) => { return { ...acc, [e.id]: e } }, {});
-                //adjList has the objects that are directly connected to the object you hand in as argument
-                let adjList2 = multiProcess.filter(e => is(e, "bpmn:SequenceFlow")).reduce((acc, f) => { return { ...acc, [f.sourceRef.id]: [...(acc[f.sourceRef.id] || []), f.targetRef.id] } }, {});
-                //lastobjs has a list of the objects that came right before the object you hand in as argument
-                let lastObjs2 = multiProcess.filter(e =>is(e, "bpmn:SequenceFlow")).reduce((acc, l) => { return { ...acc, [l.targetRef.id]: [...(acc[l.targetRef.id] || []), l.sourceRef.id] } }, {});
-                let elementsWSE2 = [...(Object.keys(adjList2)),...endEventsIds2]
-                let hiddenTree = elementsWSE2.map(f => new FlowElement(
-                    idMap2[f].$type, 
-                    idMap2[f].id, 
-                    idMap2[f].name ? idMap2[f].name : idMap2[f].id, 
-                    idMap2[f].documentation ? idMap2[f].documentation[0].text.replaceAll('\n','\n\t\t') : '', 
-                    adjList2[f],
-                    lastObjs2[f],
-                    hasLanes ? object.signatory : "generic")
-                );
-                //console.log(hiddenTree)
-                hiddenTree.map(object2 => {
-                    //console.log(lastObjs[object.id])
-                    if (object2.id[0] === 'A') {
-                        object2.nextObjs.map(next => {
-                            var adjutants = Object.assign([], adjList[next])
-                            //if the next object2 in the flow is an activity, just print a simple DAML template pointing at it
-                            if (next[0] === 'A') {
-                                let thisChild = hiddenTree.find(x => x.id === next)
-                                let thisReq = object2.documentation.split("\n\t\t")
-                                let nextReq = thisChild.documentation.split("\n\t\t")
-                                let difReq = nextReq.filter(x => !thisReq.includes(x))
-                                let sameReq = thisReq.filter(x => nextReq.includes(x))
-                                let equal = true
-                                if(difReq.length){
-                                    equal = false
-                                }
-                                DAMLFileText += ejs.render(sequence, { parent: object2, child: thisChild, thisReq: sameReq, withs: difReq, equal:equal })
-                                //console.log(ejs.render(sequence, { parent: object, child: thisChild, last: thisParent }));
-                            }
-                            //if the next object in the flow is a gateway, check if there are more gateways and what the next activites are in the flow
-                            else if (next[0] === 'G') {
-                                let currentAdj = adjutants[0]
-                                let children = []
-                                let events = []
-                                let gonnaBreak = false
-                                while (currentAdj) {
-                                    if (currentAdj[0] === 'G') {
-                                        gonnaBreak = false
-                                        let gatewayObj = idMap[currentAdj]
-                                        let objs = []
-                                        while (gatewayObj.id[0] === 'G') {
-                                            let len2 = adjList[gatewayObj.id].length
-                                            if (len2 > 1) {
-                                                for (let j = 0; j < len2; j++) {
-                                                    if (idMap[adjList[gatewayObj.id]].id[0] === 'G') {
-                                                        objs.push(idMap[adjList[gatewayObj.id][j]])
-                                                    }
-                                                    else {
-                                                        children.push(idMap[adjList[gatewayObj.id][j]])
-                                                    }
-                                                }
-                                            }
-                                            else {
-                                                if (idMap[adjList[gatewayObj.id][0]].id[0] === 'G') {
-                                                    objs.push(idMap[adjList[gatewayObj.id][0]])
+                        //if the next object in the flow is a gateway, check if there are more gateways and what the next activites are in the flow
+                        else if (next[0] === 'G') {
+                            let currentAdj = adjutants[0]
+                            let children = []
+                            let events = []
+                            let gonnaBreak = false
+                            while (currentAdj) {
+                                if (currentAdj[0] === 'G') {
+                                    gonnaBreak = false
+                                    let gatewayObj = idMap[currentAdj]
+                                    let objs = []
+                                    while (gatewayObj.id[0] === 'G') {
+                                        let len2 = adjList[gatewayObj.id].length
+                                        if (len2 > 1) {
+                                            for (let j = 0; j < len2; j++) {
+                                                if (idMap[adjList[gatewayObj.id]].id[0] === 'G') {
+                                                    objs.push(idMap[adjList[gatewayObj.id][j]])
                                                 }
                                                 else {
-                                                    children.push(idMap[adjList[gatewayObj.id][0]])
+                                                    children.push(idMap[adjList[gatewayObj.id][j]])
                                                 }
                                             }
-                                            gatewayObj = objs.shift()
-                                            gonnaBreak = true
-                                            if (typeof (gatewayObj) === "undefined") break
-                                        }
-                                        if (!gonnaBreak) {
-                                            children.push(idMap[currentAdj])
-                                        }
-                                    }
-                                    else {
-                                        //console.log(object.id + "->" + currentAdj)
-                                        if (idMap[currentAdj].$type === "bpmn:IntermediateCatchEvent") {
-                                            events.push(idMap[currentAdj])
-                                            adjutants.push(idMap[adjList[currentAdj][0]].id)
                                         }
                                         else {
-                                            children.push(idMap[currentAdj])
+                                            if (idMap[adjList[gatewayObj.id][0]].id[0] === 'G') {
+                                                objs.push(idMap[adjList[gatewayObj.id][0]])
+                                            }
+                                            else {
+                                                children.push(idMap[adjList[gatewayObj.id][0]])
+                                            }
                                         }
-        
+                                        gatewayObj = objs.shift()
+                                        gonnaBreak = true
+                                        if (typeof (gatewayObj) === "undefined") break
                                     }
-                                    adjutants.shift()
-                                    currentAdj = adjutants[0]
-                                }
-                                let childReqs = children.map(child => {
-                                    let thisChild = hiddenTree.find(x => x.id === child.id)
-                                    if(!thisChild){
-                                        return [child]
+                                    if (!gonnaBreak) {
+                                        children.push(idMap[currentAdj])
                                     }
-                                    else{
-                                        let thisReq = object2.documentation.split("\n\t\t")
-                                        let nextReq = thisChild.documentation.split("\n\t\t")
-                                        let difReq = nextReq.filter(x => !thisReq.includes(x))
-                                        let sameReq = thisReq.filter(x => nextReq.includes(x))
-                                        let equal = true
-                                        if(difReq.length){
-                                            equal = false
-                                        }
-                                        return [thisChild, sameReq, difReq, equal]
+                                }
+                                else {
+                                    //console.log(object.id + "->" + currentAdj)
+                                    if (idMap[currentAdj].$type === "bpmn:IntermediateCatchEvent") {
+                                        events.push(idMap[currentAdj])
+                                        adjutants.push(idMap[adjList[currentAdj][0]].id)
                                     }
-                                })
-                                let numberOfElements = hiddenTree.find(x => x.id === next).nextObjs.length
-                                if(idMap[next].$type.split(":")[1] === 'ExclusiveGateway' && numberOfElements > 1){
-                                    DAMLFileText += ejs.render(exclusive, { parent: object2, children: childReqs})
-                                    //console.log(ejs.render(exclusive, { parent: object, children: children, last: idMap[lastObjs[object.id][0]] }))
+                                    else {
+                                        children.push(idMap[currentAdj])
+                                    }
+
                                 }
-                                else if(idMap[next].$type.split(":")[1][0] === 'P'){
-                                    DAMLFileText += ejs.render(parallel, { parent: object2, children: childReqs})
-                                    //console.log(ejs.render(parallel, { parent: object, children: children}))
-                                }
-                                else if(idMap[next].$type.split(":")[1] === 'EventBasedGateway'){
-                                    DAMLFileText += ejs.render(event, { parent: object2, children: childReqs, events: events})
-                                    //console.log(ejs.render(event, { parent: object, children: children, events: events, last: idMap[lastObjs[object.id][0]]}))
-                                    //https://discuss.daml.com/t/experimental-bp-dsl/1185
+                                adjutants.shift()
+                                currentAdj = adjutants[0]
+                            }
+                            let childReqs = children.map(child => {
+                                let thisChild = tree.find(x => x.id === child.id)
+                                if(!thisChild){
+                                    return [child]
                                 }
                                 else{
-                                    DAMLFileText += ejs.render(sequence, { parent: object2, child: childReqs[0][0], thisReq: childReqs[0][1], withs: childReqs[0][2], equal:childReqs[0][3] })
-                                    //console.log(ejs.render(sequence, { parent: object, child: children[0], last: idMap[lastObjs[object.id][0]]}))
+                                    let thisReq = object.documentation.split("\n\t\t")
+                                    let nextReq = thisChild.documentation.split("\n\t\t")
+                                    let difReq = nextReq.filter(x => !thisReq.includes(x))
+                                    let sameReq = thisReq.filter(x => nextReq.includes(x))
+                                    let equal = true
+                                    if(difReq.length){
+                                        equal = false
+                                    }
+                                    return [thisChild, sameReq, difReq, equal]
                                 }
+                            })
+                            let numberOfElements = tree.find(x => x.id === next).nextObjs.length
+                            if(idMap[next].$type.split(":")[1] === 'ExclusiveGateway' && numberOfElements > 1){
+                                DAMLFileText += ejs.render(exclusive, { parent: object, children: childReqs})
+                                //console.log(ejs.render(exclusive, { parent: object, children: children, last: idMap[lastObjs[object.id][0]] }))
                             }
-                            //if the next object in the flow is an event, finish the template without a choice?
-                            else if (next[0] === 'E') {
-                                DAMLFileText += ejs.render(pure, { parent: object2, last: idMap2[lastObjs2[object2.id][0]] }) + "\n\n"
-                                //console.log(ejs.render(pure, { parent: object, last: idMap[lastObjs[object.id][0]] }))
+                            else if(idMap[next].$type.split(":")[1][0] === 'P'){
+                                DAMLFileText += ejs.render(parallel, { parent: object, children: childReqs})
+                                //console.log(ejs.render(parallel, { parent: object, children: children}))
                             }
-                        });
+                            else if(idMap[next].$type.split(":")[1] === 'EventBasedGateway'){
+                                DAMLFileText += ejs.render(event, { parent: object, children: childReqs, events: events})
+                                //console.log(ejs.render(event, { parent: object, children: children, events: events, last: idMap[lastObjs[object.id][0]]}))
+                                //https://discuss.daml.com/t/experimental-bp-dsl/1185
+                            }
+                            else{
+                                DAMLFileText += ejs.render(sequence, { parent: object, child: childReqs[0][0], thisReq: childReqs[0][1], withs: childReqs[0][2], equal:childReqs[0][3] })
+                                //console.log(ejs.render(sequence, { parent: object, child: children[0], last: idMap[lastObjs[object.id][0]]}))
+                            }
+                        }
+                        //if the next object in the flow is an event, finish the template without a choice?
+                        else if (next[0] === 'E') {
+                            if (object.lastObjs[0][0] === "M"){
+
+                            }
+                            else{
+                                DAMLFileText += ejs.render(pure, { parent: object, last: idMap[lastObjs[object.id][0]] }) + "\n\n"
+                            }
+                            //console.log(ejs.render(pure, { parent: object, last: idMap[lastObjs[object.id][0]] }))
+                        }
+                        else if (next[0] === 'M'){
+                            let multiProcess = process.flowElements.find(x => x.id === next)
+                            multiProcess = multiProcess.flowElements
+                            let endEvents2 = multiProcess.filter(e => e.$type === "bpmn:EndEvent")
+                            let endEventsIds2 = endEvents2.map(x => x.id)
+                            let idMap2 = multiProcess.filter(e => is(e, "bpmn:FlowNode")).reduce((acc, e) => { return { ...acc, [e.id]: e } }, {});
+                            //adjList has the objects that are directly connected to the object you hand in as argument
+                            let adjList2 = multiProcess.filter(e => is(e, "bpmn:SequenceFlow")).reduce((acc, f) => { return { ...acc, [f.sourceRef.id]: [...(acc[f.sourceRef.id] || []), f.targetRef.id] } }, {});
+                            //lastobjs has a list of the objects that came right before the object you hand in as argument
+                            let lastObjs2 = multiProcess.filter(e =>is(e, "bpmn:SequenceFlow")).reduce((acc, l) => { return { ...acc, [l.targetRef.id]: [...(acc[l.targetRef.id] || []), l.sourceRef.id] } }, {});
+                            let elementsWSE2 = [...(Object.keys(adjList2)),...endEventsIds2]
+                            let hiddenTree = elementsWSE2.map(f => new FlowElement(
+                                idMap2[f].$type, 
+                                idMap2[f].id, 
+                                idMap2[f].name ? idMap2[f].name : idMap2[f].id, 
+                                idMap2[f].documentation ? idMap2[f].documentation[0].text.replaceAll('\n','\n\t\t') : '', 
+                                adjList2[f],
+                                lastObjs2[f],
+                                hasLanes ? object.signatory : "generic")
+                            )
+                            let thisChild = hiddenTree.find(x => x.id === hiddenTree.find(x => x.type === "bpmn:StartEvent").nextObjs[0])
+                            let thisReq = object.documentation.split("\n\t\t")
+                            let nextReq = thisChild.documentation.split("\n\t\t")
+                            let difReq = nextReq.filter(x => !thisReq.includes(x))
+                            let sameReq = thisReq.filter(x => nextReq.includes(x))
+                            let equal = true
+                            if(difReq.length){
+                                equal = false
+                            }
+                            DAMLFileText += ejs.render(sequence, { parent: object, child: thisChild, thisReq: sameReq, withs: difReq, equal:equal })
+                        }
                     }
-                });  
+                }
+                else if (object.id[0] === 'M'){
+                    let multiProcess = process.flowElements.find(x => x.id === object.id)
+                    multiProcess = multiProcess.flowElements
+                    let endEvents2 = multiProcess.filter(e => e.$type === "bpmn:EndEvent")
+                    let endEventsIds2 = endEvents2.map(x => x.id)
+                    let idMap2 = multiProcess.filter(e => is(e, "bpmn:FlowNode")).reduce((acc, e) => { return { ...acc, [e.id]: e } }, {});
+                    //adjList has the objects that are directly connected to the object you hand in as argument
+                    let adjList2 = multiProcess.filter(e => is(e, "bpmn:SequenceFlow")).reduce((acc, f) => { return { ...acc, [f.sourceRef.id]: [...(acc[f.sourceRef.id] || []), f.targetRef.id] } }, {});
+                    //lastobjs has a list of the objects that came right before the object you hand in as argument
+                    let lastObjs2 = multiProcess.filter(e =>is(e, "bpmn:SequenceFlow")).reduce((acc, l) => { return { ...acc, [l.targetRef.id]: [...(acc[l.targetRef.id] || []), l.sourceRef.id] } }, {});
+                    let elementsWSE2 = [...(Object.keys(adjList2)),...endEventsIds2]
+                    let hiddenTree = elementsWSE2.map(f => new FlowElement(
+                        idMap2[f].$type, 
+                        idMap2[f].id, 
+                        idMap2[f].name ? idMap2[f].name : idMap2[f].id, 
+                        idMap2[f].documentation ? idMap2[f].documentation[0].text.replaceAll('\n','\n\t\t') : '', 
+                        adjList2[f],
+                        lastObjs2[f],
+                        hasLanes ? object.signatory : "generic")
+                    )
+                    DAMLFileText = BPMN2Text(hiddenTree, idMap2, adjList2, lastObjs2, DAMLFileText, true)
+                }
             }
-        });
+            return DAMLFileText
+        }
+
+        DAMLFileText = BPMN2Text(tree, idMap, adjList, lastObjs, DAMLFileText, false)
+
+
+
         fs.mkdir("daml_output/daml",{ recursive: true }, (err) => {
             if (err){
                 throw err;
