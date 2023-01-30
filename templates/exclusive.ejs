@@ -5,13 +5,13 @@ template <%= parent.id %>
         signatory <%= parent.signatory %>
 <% children.forEach((child,index) => { -%>
     <% if (child.length === 1) { %>
-        nonconsuming choice <%= parent.name.replaceAll(" ","") %> : ()
+        choice <%= parent.name.replaceAll(" ","") %> : ()
             controller <%= parent.signatory %>
             do
                 return ()
             <% "\r" -%>
     <% } else {%>
-        nonconsuming choice Reject : ContractId <%= child[0].id %>
+        choice Reject : ContractId <%= child[0].id %>
         <% if (!child[3]) { -%>
     with
             <% child[2].forEach((child2,index2) => { -%>

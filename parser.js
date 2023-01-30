@@ -12,6 +12,8 @@ var sequence = fs.readFileSync('templates/child.ejs', 'utf-8');
 var exclusive = fs.readFileSync('templates/exclusive.ejs', 'utf-8');
 var parallel = fs.readFileSync('templates/parallel.ejs', 'utf-8');
 var event = fs.readFileSync('templates/event.ejs', 'utf-8');
+var fetch = fs.readFileSync('templates/fetch.ejs', 'utf-8');
+var multiple = fs.readFileSync('templates/multiple.ejs', 'utf-8');
 
 //Flow element object used to instatiate elements of the flow tree used to represent the bpmn model
 class FlowElement {
@@ -34,23 +36,24 @@ bpmnModdle.fromXML(bpmnText).then(bpmn => {
         let traverse = (curr, visited) => {
 
         };
-        let DAMLFileText = `module Main where\n\nimport DA.List\nimport DA.Optional\nimport Daml.Script\n\n`;
-        let hasLanes = false;
-        let lanes = undefined;
-        let references = undefined;
+        let DAMLFileText = `module Main where\n\nimport DA.List\nimport DA.Optional\nimport Daml.Script\n\n`
+        let hasLanes = false
+        let lanes = undefined
+        let references = undefined
         //import of every single bpmn element in the model
-        let rootElements = bpmn.rootElement.rootElements;
+        let rootElements = bpmn.rootElement.rootElements
         //console.log(rootElements[1].laneSets[0].lanes[0].flowNodeRefs)
         //console.log(bpmn.references)
-        let process = rootElements.find(x => x.$type === "bpmn:Process");
+        let process = rootElements.find(x => x.$type === "bpmn:Process")
         let elements = process.flowElements;
         //import of elements subdivided in categories, currently unused
-        let activities = elements.filter(e => is(e, "bpmn:Activity"));
-        let Events = elements.filter(e => is(e, "bpmn:Event"));
+        let activities = elements.filter(e => is(e, "bpmn:Activity"))
+        let Events = elements.filter(e => is(e, "bpmn:Event"))
         let endEvents = elements.filter(e => e.$type === "bpmn:EndEvent")
         let endEventsIds = endEvents.map(x => x.id)
-        let flows = elements.filter(e => is(e, "bpmn:SequenceFlow"));
-        let gateways = elements.filter(e => is(e, "bpmn:Gateway"));
+        let flows = elements.filter(e => is(e, "bpmn:SequenceFlow"))
+        let gateways = elements.filter(e => is(e, "bpmn:Gateway"))
+        let lastActivity = undefined
         if(process.laneSets){
             lanes = process.laneSets[0].lanes;
             references = lanes.map(lane => bpmn.references.map(x => (x.element.id === lane.id) ? x.id : null));
@@ -79,11 +82,15 @@ bpmnModdle.fromXML(bpmnText).then(bpmn => {
         //console.log(tree)
 
         //BPMN -> DAML translator function, only does something when the object in turn is an activity
-        function BPMN2Text(tree, idMap, adjList, lastObjs, DAMLFileText, recursion){
-            let removed = undefined
+        function BPMN2Text(tree, idMap, adjList, lastObjs, DAMLFileText, recursion, firstAfter){
+            let hasToFetch = false
             for (let i = 0; i<tree.length; i++){
+                hasToFetch = false
                 let object = tree[i]
                 if (object.id[0] === 'A') {
+                    if (recursion && object.nextObjs.find(x => x[0] === 'E')){
+                        lastActivity = object
+                    }
                     let temp = object.nextObjs
                     for (let j = 0; j<temp.length;j++){
                         let next = temp[j]
@@ -99,11 +106,14 @@ bpmnModdle.fromXML(bpmnText).then(bpmn => {
                             if(difReq.length){
                                 equal = false
                             }
-                            if (object.lastObjs[0][0] === "M"){
-
+                            if (recursion && thisChild.nextObjs.find(x => x[0] === 'E')){
+                                DAMLFileText += ejs.render(multiple, {parent: object, child: thisChild, thisReq: sameReq, withs: difReq, equal:equal, first : firstAfter})
+                            }
+                            else if (object.lastObjs[0][0] === "M"){
+                                DAMLFileText += ejs.render(fetch, { parent: object, child: thisChild, thisReq: sameReq, withs: difReq, equal:equal, last:lastActivity})       
                             }
                             else{
-                                DAMLFileText += ejs.render(sequence, { parent: object, child: thisChild, thisReq: sameReq, withs: difReq, equal:equal })
+                                DAMLFileText += ejs.render(sequence, { parent: object, child: thisChild, thisReq: sameReq, withs: difReq, equal:equal, recursion:recursion })
                             }
                             //console.log(ejs.render(sequence, { parent: object, child: thisChild, last: thisParent }));
                         }
@@ -199,33 +209,16 @@ bpmnModdle.fromXML(bpmnText).then(bpmn => {
                         //if the next object in the flow is an event, finish the template without a choice?
                         else if (next[0] === 'E') {
                             if (object.lastObjs[0][0] === "M"){
-
+                                DAMLFileText += ejs.render(pure, { parent: object, last: idMap[lastObjs[object.id][0]], recursion: recursion }) + "\n\n"
                             }
                             else{
-                                DAMLFileText += ejs.render(pure, { parent: object, last: idMap[lastObjs[object.id][0]] }) + "\n\n"
+                                DAMLFileText += ejs.render(pure, { parent: object, last: idMap[lastObjs[object.id][0]], recursion: recursion }) + "\n\n"
                             }
                             //console.log(ejs.render(pure, { parent: object, last: idMap[lastObjs[object.id][0]] }))
                         }
                         else if (next[0] === 'M'){
-                            let multiProcess = process.flowElements.find(x => x.id === next)
-                            multiProcess = multiProcess.flowElements
-                            let endEvents2 = multiProcess.filter(e => e.$type === "bpmn:EndEvent")
-                            let endEventsIds2 = endEvents2.map(x => x.id)
-                            let idMap2 = multiProcess.filter(e => is(e, "bpmn:FlowNode")).reduce((acc, e) => { return { ...acc, [e.id]: e } }, {});
-                            //adjList has the objects that are directly connected to the object you hand in as argument
-                            let adjList2 = multiProcess.filter(e => is(e, "bpmn:SequenceFlow")).reduce((acc, f) => { return { ...acc, [f.sourceRef.id]: [...(acc[f.sourceRef.id] || []), f.targetRef.id] } }, {});
-                            //lastobjs has a list of the objects that came right before the object you hand in as argument
-                            let lastObjs2 = multiProcess.filter(e =>is(e, "bpmn:SequenceFlow")).reduce((acc, l) => { return { ...acc, [l.targetRef.id]: [...(acc[l.targetRef.id] || []), l.sourceRef.id] } }, {});
-                            let elementsWSE2 = [...(Object.keys(adjList2)),...endEventsIds2]
-                            let hiddenTree = elementsWSE2.map(f => new FlowElement(
-                                idMap2[f].$type, 
-                                idMap2[f].id, 
-                                idMap2[f].name ? idMap2[f].name : idMap2[f].id, 
-                                idMap2[f].documentation ? idMap2[f].documentation[0].text.replaceAll('\n','\n\t\t') : '', 
-                                adjList2[f],
-                                lastObjs2[f],
-                                hasLanes ? object.signatory : "generic")
-                            )
+                            let hiddenTree = multiProcessTree(tree.find(x => x.id === next))[0]
+                            console.log(hiddenTree)
                             let thisChild = hiddenTree.find(x => x.id === hiddenTree.find(x => x.type === "bpmn:StartEvent").nextObjs[0])
                             let thisReq = object.documentation.split("\n\t\t")
                             let nextReq = thisChild.documentation.split("\n\t\t")
@@ -240,33 +233,38 @@ bpmnModdle.fromXML(bpmnText).then(bpmn => {
                     }
                 }
                 else if (object.id[0] === 'M'){
-                    let multiProcess = process.flowElements.find(x => x.id === object.id)
-                    multiProcess = multiProcess.flowElements
-                    let endEvents2 = multiProcess.filter(e => e.$type === "bpmn:EndEvent")
-                    let endEventsIds2 = endEvents2.map(x => x.id)
-                    let idMap2 = multiProcess.filter(e => is(e, "bpmn:FlowNode")).reduce((acc, e) => { return { ...acc, [e.id]: e } }, {});
-                    //adjList has the objects that are directly connected to the object you hand in as argument
-                    let adjList2 = multiProcess.filter(e => is(e, "bpmn:SequenceFlow")).reduce((acc, f) => { return { ...acc, [f.sourceRef.id]: [...(acc[f.sourceRef.id] || []), f.targetRef.id] } }, {});
-                    //lastobjs has a list of the objects that came right before the object you hand in as argument
-                    let lastObjs2 = multiProcess.filter(e =>is(e, "bpmn:SequenceFlow")).reduce((acc, l) => { return { ...acc, [l.targetRef.id]: [...(acc[l.targetRef.id] || []), l.sourceRef.id] } }, {});
-                    let elementsWSE2 = [...(Object.keys(adjList2)),...endEventsIds2]
-                    let hiddenTree = elementsWSE2.map(f => new FlowElement(
-                        idMap2[f].$type, 
-                        idMap2[f].id, 
-                        idMap2[f].name ? idMap2[f].name : idMap2[f].id, 
-                        idMap2[f].documentation ? idMap2[f].documentation[0].text.replaceAll('\n','\n\t\t') : '', 
-                        adjList2[f],
-                        lastObjs2[f],
-                        hasLanes ? object.signatory : "generic")
-                    )
-                    DAMLFileText = BPMN2Text(hiddenTree, idMap2, adjList2, lastObjs2, DAMLFileText, true)
+                    let hiddenTreeArray = multiProcessTree(object)
+                    let afterActivity = tree.find(x => x.id === object.nextObjs[0])
+                    DAMLFileText = BPMN2Text(hiddenTreeArray[0], hiddenTreeArray[1], hiddenTreeArray[2], hiddenTreeArray[3], DAMLFileText, true, afterActivity)
                 }
             }
             return DAMLFileText
         }
 
-        DAMLFileText = BPMN2Text(tree, idMap, adjList, lastObjs, DAMLFileText, false)
+        DAMLFileText = BPMN2Text(tree, idMap, adjList, lastObjs, DAMLFileText, false, undefined)
 
+        function multiProcessTree(multiProcessObject){
+            let multiProcess = process.flowElements.find(x => x.id === multiProcessObject.id)
+            multiProcess = multiProcess.flowElements
+            let endEvents = multiProcess.filter(e => e.$type === "bpmn:EndEvent")
+            let endEventsIds = endEvents.map(x => x.id)
+            let idMap = multiProcess.filter(e => is(e, "bpmn:FlowNode")).reduce((acc, e) => { return { ...acc, [e.id]: e } }, {});
+            //adjList has the objects that are directly connected to the object you hand in as argument
+            let adjList = multiProcess.filter(e => is(e, "bpmn:SequenceFlow")).reduce((acc, f) => { return { ...acc, [f.sourceRef.id]: [...(acc[f.sourceRef.id] || []), f.targetRef.id] } }, {});
+            //lastobjs has a list of the objects that came right before the object you hand in as argument
+            let lastObjs = multiProcess.filter(e =>is(e, "bpmn:SequenceFlow")).reduce((acc, l) => { return { ...acc, [l.targetRef.id]: [...(acc[l.targetRef.id] || []), l.sourceRef.id] } }, {});
+            let elementsWSE = [...(Object.keys(adjList)),...endEventsIds]
+            let hiddenTree = elementsWSE.map(f => new FlowElement(
+                idMap[f].$type, 
+                idMap[f].id, 
+                idMap[f].name ? idMap[f].name : idMap[f].id, 
+                idMap[f].documentation ? idMap[f].documentation[0].text.replaceAll('\n','\n\t\t') : '', 
+                adjList[f],
+                lastObjs[f],
+                hasLanes ? multiProcessObject.signatory : "generic")
+            )
+            return [hiddenTree, idMap, adjList, lastObjs]
+        }
 
 
         fs.mkdir("daml_output/daml",{ recursive: true }, (err) => {

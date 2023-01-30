@@ -4,7 +4,7 @@ template <%= parent.id %>
     where
         signatory <%= parent.signatory %>
 
-    <%- "\r\t\t" %>nonconsuming choice <%= parent.name.replaceAll(" ","") %> : (<% children.forEach((child,index) => { -%> ContractId <%-child[0].id %><% if(children.length-1 != index){%>,<%}%> <% }) %>) <%let done = false %>
+    <%- "\r\t\t" %>choice <%= parent.name.replaceAll(" ","") %> : (<% children.forEach((child,index) => { -%> ContractId <%-child[0].id %><% if(children.length-1 != index){%>,<%}%> <% }) %>) <%let done = false %>
     <% children.forEach((child,index) => { %><% if (!child[3] && !done) { %><% done = true %><%="\t\t"%>with<% child[2].forEach((child2,index2) => { %><%="\r\t\t\t\t"%><%=child2%><% }) %><%="\r"%><% } else if (!child[3] && done) { %><% child[2].forEach((child2,index2) => { %><%="\t\t\t\t"%><%=child2%>
 <% }) %><% } -%><% }) -%>
 <%-"\t\tcontroller " + parent.signatory %>

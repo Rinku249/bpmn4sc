@@ -6,13 +6,13 @@ template <%= parent.id %>
 
 <% events.forEach((event,index) => { -%>
     <% if (children[index].length === 1) { %>
-        nonconsuming choice <%= event.name.replaceAll(" ","") %> : ()
+        choice <%= event.name.replaceAll(" ","") %> : ()
             controller <%= parent.signatory %>
             do
                 return ()
             <% "\r" -%>
     <% } else {-%>
-        <%- "\r\t" %>nonconsuming choice <%= event.name.replaceAll(" ","") %> : ContractId <%= children[index][0].id %>
+        <%- "\r\t" %>choice <%= event.name.replaceAll(" ","") %> : ContractId <%= children[index][0].id %>
         <% if (!children[index][3]) { -%>
     with
             <% children[index][2].forEach((child,index2) => { -%>

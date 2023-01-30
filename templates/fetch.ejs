@@ -1,0 +1,41 @@
+template <%= parent.id %> 
+    with
+        <%= parent.documentation %>
+    where
+        signatory <%= parent.signatory %>
+        <% x = parent.documentation.split("\n\t\t");
+        m = undefined;
+        for (let i = 0 ; i < x.length ; i++){
+            if(x[i].includes("[Party]")){
+                m = x[i].split(" : [Party]")[0]
+                break
+            }
+        }
+        p = undefined
+        if(withs[0].includes("Party")){
+            p = withs[0].split(":")[0] + "= desiredReturn." + withs[0].split(" :")[0] + "\n\t\t\t\t\t" + withs[1].split(":")[0] + "= desiredReturn." + withs[1].split(" :")[0] 
+        }
+        else{
+            p = withs[1].split(":")[0] + "= desiredReturn." + withs[1].split(" :")[0] + "\n\t\t\t\t\t" + withs[0].split(":")[0] + "= desiredReturn.desiredReturn"
+        }
+        %>
+        choice <%= parent.name.replaceAll(" ","") %> : ContractId <%= child.id %>
+            controller <%= parent.signatory %>
+            do
+                lookedValues <- mapA (\c -> lookupByKey @Repetition (<%= parent.signatory %>, c)) <%=m%>
+                let qs = catOptionals lookedValues
+                lookedEmpty <- mapA (\c -> lookupByKey @<%= last.id %> (<%= parent.signatory %>, c)) <%=m%>
+                let sv = catOptionals lookedEmpty
+
+                let ordered = (sortOn \(Repetition) -> Repetition.desiredReturn) values 
+                let desiredReturn = head ordered
+
+                mapA (\id -> archive id) qs
+                mapA (\id -> archive id) sv
+
+                create <% child.id %> with
+            <% thisReq.forEach((child,index) => { -%>
+        <%= child.split(" :")[0] %> = <%-child.split(" :")[0] -%> 
+            <% }) -%>
+        <%= p %>
+                

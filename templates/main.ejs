@@ -1,11 +1,58 @@
+<% if (recursion) { -%>
+type <%=parent.id%>Key = (Party, Party)
+<%} -%>
 template <%= parent.id %> 
     with
         <%= parent.documentation %>
     where
-        signatory <%= parent.signatory %>
-        
-        nonconsuming choice <%= parent.name.replaceAll(" ","") %> : ()
+        signatory <%= parent.signatory -%>
+        <% x = parent.documentation.split("\n\t\t");
+            m = undefined;
+        for (let i = x.length-1 ; i < x.length ; i--){
+            if(x[i].includes("Party")){
+                if(x[i].split(" : Party")[0] === parent.signatory){
+                    continue;
+                }
+                else{
+                    m = x[i].split(" : Party")[0]
+                    m = m.split(" : [Party]")[0]
+                    break;
+                }
+            }
+        }%>
+        observer <%= m -%>
+
+        <% if (recursion) { %>
+        key (<%=parent.signatory%>, <%= m %>)
+        maintainer key._1
+        <% } -%>
+        <%if (recursion) { %>
+        choice <%= parent.name.replaceAll(" ","") %> : ContractId RepetitionKey
+            with 
+                desiredReturn : Text
+            controller <%=m%>
+            do
+                create RepetitionKey with
+                    <%= m %> = <%= m %>
+                    <%= parent.signatory%> = <%= parent.signatory%>
+                    desiredReturn = desiredReturn
+        <%} else { -%>
+
+        choice <%= parent.name.replaceAll(" ","") %> : ()
             controller <%= parent.signatory %>
             do
                 return ()
-        
+        <% } -%>
+<% if (recursion){ %>
+type RepetitionKey = (Party, Party)
+template Repetition
+    with
+        <%= m %> : Party
+        <%= parent.signatory%> : Party
+        desiredReturn : Text
+    where
+        signatory <%= parent.signatory%>
+        observer <%= m %>
+    
+        key (<%=parent.signatory%>, <%= m %>)
+        maintainer key._1<%} %>

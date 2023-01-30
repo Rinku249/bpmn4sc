@@ -4,7 +4,7 @@ template <%= parent.id %>
     where
         signatory <%= parent.signatory %>
         
-        nonconsuming choice <%= parent.name.replaceAll(" ","") %> : ContractId <%= child.id -%>
+        choice <%= parent.name.replaceAll(" ","") %> : ContractId <%= child.id -%>
         <% if (!equal) { -%><% "\r" %>
             with<% withs.forEach((child,index) => { -%><%= "\r\t\t\t\t" + child%><% }) -%>
             <% } %>

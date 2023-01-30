@@ -1,0 +1,38 @@
+template <%= parent.id %> 
+    with
+        <%= parent.documentation %>
+    where
+        signatory <%= parent.signatory %>
+        let list = []
+        <% x = first.documentation.split("\n\t\t");
+        m = undefined;
+        for (let i = 0 ; i < x.length ; i++){
+            if(x[i].includes("[Party]")){
+                m = x[i].split(" : [Party]")[0]
+                break
+            }
+        }%>
+        nonconsuming choice <%= parent.name.replaceAll(" ","") %> : ContractId <%= child.id -%>
+        <% if (!equal) { -%><% "\r" %>
+            with<% withs.forEach((child,index) => { -%><%= "\r\t\t\t\t" + child%><% }) -%>
+            <% } %>
+            controller <%= parent.signatory %>
+            do
+                create <%- child.id %> with
+            <% thisReq.forEach((child,index) => { -%>
+        <%= child.split(" :")[0] %> = <%-child.split(" :")[0] -%> 
+            <% }) -%><% if (!equal) { -%><% withs.forEach((child,index) => { -%>
+        <%= child.split(" :")[0] -%> = <%-child.split(" :")[0] %>
+            <% }) -%>
+        <% } %>
+                list ++ [<%= withs[0].split(" :")[0] %>]
+
+        choice FinishRecursion : ContractId <%= first.id %>
+            controller <%= parent.signatory %>
+            do
+                create <%- first.id %> with
+                <% thisReq.forEach((child,index) => { -%>
+    <%= child.split(" :")[0] %> = <%-child.split(" :")[0] -%> 
+                <% }) -%>
+    <%=m%> = list
+
