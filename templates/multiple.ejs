@@ -3,7 +3,6 @@ template <%= parent.id %>
         <%= parent.documentation %>
     where
         signatory <%= parent.signatory %>
-        let list = []
         <% x = first.documentation.split("\n\t\t");
         m = undefined;
         for (let i = 0 ; i < x.length ; i++){
@@ -11,21 +10,24 @@ template <%= parent.id %>
                 m = x[i].split(" : [Party]")[0]
                 break
             }
+        }
+        y = parent.documentation.split("\n\t\t");
+        p = undefined;
+        for (let i = 0 ; i < y.length ; i++){
+            if(y[i].includes("[Party]")){
+                p = y[i].split(" : [Party]")[0]
+                break
+            }
         }%>
-        nonconsuming choice <%= parent.name.replaceAll(" ","") %> : ContractId <%= child.id -%>
-        <% if (!equal) { -%><% "\r" %>
-            with<% withs.forEach((child,index) => { -%><%= "\r\t\t\t\t" + child%><% }) -%>
-            <% } %>
+        nonconsuming choice <%= parent.name.replaceAll(" ","") %> : [ContractId <%= child.id %>]
             controller <%= parent.signatory %>
             do
-                create <%- child.id %> with
-            <% thisReq.forEach((child,index) => { -%>
-        <%= child.split(" :")[0] %> = <%-child.split(" :")[0] -%> 
-            <% }) -%><% if (!equal) { -%><% withs.forEach((child,index) => { -%>
-        <%= child.split(" :")[0] -%> = <%-child.split(" :")[0] %>
-            <% }) -%>
-        <% } %>
-                list ++ [<%= withs[0].split(" :")[0] %>]
+                mapA(\c -> 
+                    create <%- child.id %> with
+                <% thisReq.forEach((child,index) => { -%>
+            <%= child.split(" :")[0] %> = <%-child.split(" :")[0] -%> 
+                <% }) -%><% if (!equal) { -%><% withs.forEach((child,index) => { -%>
+            <%= child.split(" :")[0] -%> = c<% }) -%><% } %>) <%=p%>
 
         choice FinishRecursion : ContractId <%= first.id %>
             controller <%= parent.signatory %>
@@ -34,5 +36,5 @@ template <%= parent.id %>
                 <% thisReq.forEach((child,index) => { -%>
     <%= child.split(" :")[0] %> = <%-child.split(" :")[0] -%> 
                 <% }) -%>
-    <%=m%> = list
+    <%=m%> = <%=p%>
 

@@ -3,22 +3,21 @@ template <%= parent.id %>
         <%= parent.documentation %>
     where
         signatory <%= parent.signatory %>
-
 <% events.forEach((event,index) => { -%>
-    <% if (children[index].length === 1) { %>
+    <% if (!children[index][1].length) { %>
         choice <%= event.name.replaceAll(" ","") %> : ()
             controller <%= parent.signatory %>
             do
                 return ()
             <% "\r" -%>
-    <% } else {-%>
-        <%- "\r\t" %>choice <%= event.name.replaceAll(" ","") %> : ContractId <%= children[index][0].id %>
+    <% } else { %>
+        choice <%= event.name.replaceAll(" ","") %> : ContractId <%= children[index][0].id %>
         <% if (!children[index][3]) { -%>
     with
             <% children[index][2].forEach((child,index2) => { -%>
     <%-child%>  
             <% }) %><% } -%>
-controller <%= parent.signatory %>
+    controller <%= parent.signatory %>
             do
                 create <%- children[index][0].id -%> with
                     <% children[index][1].forEach((child,index2) => { -%>

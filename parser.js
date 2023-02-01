@@ -36,7 +36,7 @@ bpmnModdle.fromXML(bpmnText).then(bpmn => {
         let traverse = (curr, visited) => {
 
         };
-        let DAMLFileText = `module Main where\n\nimport DA.List\nimport DA.Optional\nimport Daml.Script\n\n`
+        let DAMLFileText = `module Main where\n\nimport DA.List\nimport DA.Optional\n\n`
         let hasLanes = false
         let lanes = undefined
         let references = undefined
@@ -110,6 +110,7 @@ bpmnModdle.fromXML(bpmnText).then(bpmn => {
                                 DAMLFileText += ejs.render(multiple, {parent: object, child: thisChild, thisReq: sameReq, withs: difReq, equal:equal, first : firstAfter})
                             }
                             else if (object.lastObjs[0][0] === "M"){
+                                console.log(thisChild)
                                 DAMLFileText += ejs.render(fetch, { parent: object, child: thisChild, thisReq: sameReq, withs: difReq, equal:equal, last:lastActivity})       
                             }
                             else{
@@ -218,7 +219,6 @@ bpmnModdle.fromXML(bpmnText).then(bpmn => {
                         }
                         else if (next[0] === 'M'){
                             let hiddenTree = multiProcessTree(tree.find(x => x.id === next))[0]
-                            console.log(hiddenTree)
                             let thisChild = hiddenTree.find(x => x.id === hiddenTree.find(x => x.type === "bpmn:StartEvent").nextObjs[0])
                             let thisReq = object.documentation.split("\n\t\t")
                             let nextReq = thisChild.documentation.split("\n\t\t")
@@ -279,8 +279,7 @@ source: daml
 version: 0.0.1
 dependencies:
     - daml-prim
-    - daml-stdlib
-    - daml-script`, (err2) => {if (err2) throw (err2)})
+    - daml-stdlib`, (err2) => {if (err2) throw (err2)})
             }
         })
     });

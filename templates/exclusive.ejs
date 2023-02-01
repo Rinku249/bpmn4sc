@@ -4,14 +4,14 @@ template <%= parent.id %>
     where
         signatory <%= parent.signatory %>
 <% children.forEach((child,index) => { -%>
-    <% if (child.length === 1) { %>
+    <% if (!child[1].length) { %>
         choice <%= parent.name.replaceAll(" ","") %> : ()
             controller <%= parent.signatory %>
             do
                 return ()
             <% "\r" -%>
     <% } else {%>
-        choice Reject : ContractId <%= child[0].id %>
+        choice <%= parent.id %>_Reject : ContractId <%= child[0].id %>
         <% if (!child[3]) { -%>
     with
             <% child[2].forEach((child2,index2) => { -%>
@@ -22,4 +22,6 @@ controller <%= parent.signatory %>
                 create <%- child[0].id -%> with
                     <% child[1].forEach((child2,index2) => { -%>
 <%-child2.split(" :")[0] %> = <%-child2.split(" :")[0] -%> 
-                    <% }) -%><% } -%><% })-%> 
+                    <% }) -%><% if (!child[3]) { -%><% child[2].forEach((child2,index2) => { -%>
+<%-child2.split(" :")[0] %> = <%-child2.split(" :")[0] %>
+                    <% })} -%><% }})-%> 

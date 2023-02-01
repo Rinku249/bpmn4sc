@@ -23,16 +23,16 @@ template <%= parent.id %>
         observer <%= m -%>
 
         <% if (recursion) { %>
-        key (<%=parent.signatory%>, <%= m %>)
+        key (<%=parent.signatory%>, <%= m %>) : <%=parent.id%>Key
         maintainer key._1
         <% } -%>
         <%if (recursion) { %>
-        choice <%= parent.name.replaceAll(" ","") %> : ContractId RepetitionKey
+        choice <%= parent.name.replaceAll(" ","") %> : ContractId Repetition
             with 
                 desiredReturn : Text
             controller <%=m%>
             do
-                create RepetitionKey with
+                create Repetition with
                     <%= m %> = <%= m %>
                     <%= parent.signatory%> = <%= parent.signatory%>
                     desiredReturn = desiredReturn
@@ -54,5 +54,5 @@ template Repetition
         signatory <%= parent.signatory%>
         observer <%= m %>
     
-        key (<%=parent.signatory%>, <%= m %>)
+        key (<%=parent.signatory%>, <%= m %>) : RepetitionKey
         maintainer key._1<%} %>

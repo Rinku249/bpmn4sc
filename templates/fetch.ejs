@@ -26,14 +26,15 @@ template <%= parent.id %>
                 let qs = catOptionals lookedValues
                 lookedEmpty <- mapA (\c -> lookupByKey @<%= last.id %> (<%= parent.signatory %>, c)) <%=m%>
                 let sv = catOptionals lookedEmpty
+                values <- mapA (\id -> fetch id) qs
 
-                let ordered = (sortOn \(Repetition) -> Repetition.desiredReturn) values 
+                let ordered = (sortOn \(desiredReturn) -> desiredReturn.desiredReturn) values 
                 let desiredReturn = head ordered
 
                 mapA (\id -> archive id) qs
                 mapA (\id -> archive id) sv
 
-                create <% child.id %> with
+                create <%= child.id %> with
             <% thisReq.forEach((child,index) => { -%>
         <%= child.split(" :")[0] %> = <%-child.split(" :")[0] -%> 
             <% }) -%>
