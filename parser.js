@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import BPMNModdle from 'bpmn-moddle';
 import ejs from 'ejs';
 import { type } from 'node:os';
+import { exec } from 'node:child_process';
 
 
 //local imports, first is only the bpmn model in xml text. Others are EJS scripts for correct formatting
@@ -17,14 +18,14 @@ var multiple = fs.readFileSync('templates/multiple.ejs', 'utf-8');
 
 //Flow element object used to instatiate elements of the flow tree used to represent the bpmn model
 class FlowElement {
-    constructor(type, id, name, documentation, nextObjs, lastObjs, signatory) {
+    constructor(type, id, name, documentation, nextObjs, lastObjs, lane) {
         this.type = type;
         this.id = id;
         this.name = name;
         this.documentation = documentation;
         this.nextObjs = nextObjs;
         this.lastObjs = lastObjs;
-        this.signatory = signatory;
+        this.lane = lane;
     }
 }
 
@@ -36,7 +37,7 @@ bpmnModdle.fromXML(bpmnText).then(bpmn => {
         let traverse = (curr, visited) => {
 
         };
-        let DAMLFileText = `module Main where\n\nimport DA.List\nimport DA.Optional\n\n`
+        let DAMLFileText = `module Main where\n\nimport DA.List\nimport DA.Optional\nimport Daml.Script\n\n`
         let hasLanes = false
         let lanes = undefined
         let references = undefined
@@ -102,19 +103,19 @@ bpmnModdle.fromXML(bpmnText).then(bpmn => {
                             let nextReq = thisChild.documentation.split("\n\t\t")
                             let difReq = nextReq.filter(x => !thisReq.includes(x))
                             let sameReq = thisReq.filter(x => nextReq.includes(x))
+                            let lastObj = object.lastObjs
                             let equal = true
                             if(difReq.length){
                                 equal = false
                             }
                             if (recursion && thisChild.nextObjs.find(x => x[0] === 'E')){
-                                DAMLFileText += ejs.render(multiple, {parent: object, child: thisChild, thisReq: sameReq, withs: difReq, equal:equal, first : firstAfter})
+                                DAMLFileText += ejs.render(multiple, {parent: object, child: thisChild, thisReq: sameReq, withs: difReq, equal:equal, first : firstAfter}) + "\n\n"
                             }
                             else if (object.lastObjs[0][0] === "M"){
-                                console.log(thisChild)
-                                DAMLFileText += ejs.render(fetch, { parent: object, child: thisChild, thisReq: sameReq, withs: difReq, equal:equal, last:lastActivity})       
+                                DAMLFileText += ejs.render(fetch, { parent: object, child: thisChild, thisReq: sameReq, withs: difReq, equal:equal, last:lastActivity}) + "\n\n"    
                             }
                             else{
-                                DAMLFileText += ejs.render(sequence, { parent: object, child: thisChild, thisReq: sameReq, withs: difReq, equal:equal, recursion:recursion })
+                                DAMLFileText += ejs.render(sequence, { parent: object, child: thisChild, thisReq: sameReq, withs: difReq, equal:equal, recursion:recursion }) + "\n\n"
                             }
                             //console.log(ejs.render(sequence, { parent: object, child: thisChild, last: thisParent }));
                         }
@@ -190,20 +191,20 @@ bpmnModdle.fromXML(bpmnText).then(bpmn => {
                             })
                             let numberOfElements = tree.find(x => x.id === next).nextObjs.length
                             if(idMap[next].$type.split(":")[1] === 'ExclusiveGateway' && numberOfElements > 1){
-                                DAMLFileText += ejs.render(exclusive, { parent: object, children: childReqs})
+                                DAMLFileText += ejs.render(exclusive, { parent: object, children: childReqs}) + "\n\n"
                                 //console.log(ejs.render(exclusive, { parent: object, children: children, last: idMap[lastObjs[object.id][0]] }))
                             }
                             else if(idMap[next].$type.split(":")[1][0] === 'P'){
-                                DAMLFileText += ejs.render(parallel, { parent: object, children: childReqs})
+                                DAMLFileText += ejs.render(parallel, { parent: object, children: childReqs}) + "\n\n"
                                 //console.log(ejs.render(parallel, { parent: object, children: children}))
                             }
                             else if(idMap[next].$type.split(":")[1] === 'EventBasedGateway'){
-                                DAMLFileText += ejs.render(event, { parent: object, children: childReqs, events: events})
+                                DAMLFileText += ejs.render(event, { parent: object, children: childReqs, events: events}) + "\n\n"
                                 //console.log(ejs.render(event, { parent: object, children: children, events: events, last: idMap[lastObjs[object.id][0]]}))
                                 //https://discuss.daml.com/t/experimental-bp-dsl/1185
                             }
                             else{
-                                DAMLFileText += ejs.render(sequence, { parent: object, child: childReqs[0][0], thisReq: childReqs[0][1], withs: childReqs[0][2], equal:childReqs[0][3] })
+                                DAMLFileText += ejs.render(sequence, { parent: object, child: childReqs[0][0], thisReq: childReqs[0][1], withs: childReqs[0][2], equal:childReqs[0][3] }) + "\n\n"
                                 //console.log(ejs.render(sequence, { parent: object, child: children[0], last: idMap[lastObjs[object.id][0]]}))
                             }
                         }
@@ -228,7 +229,7 @@ bpmnModdle.fromXML(bpmnText).then(bpmn => {
                             if(difReq.length){
                                 equal = false
                             }
-                            DAMLFileText += ejs.render(sequence, { parent: object, child: thisChild, thisReq: sameReq, withs: difReq, equal:equal })
+                            DAMLFileText += ejs.render(sequence, { parent: object, child: thisChild, thisReq: sameReq, withs: difReq, equal:equal }) + "\n\n"
                         }
                     }
                 }
@@ -261,10 +262,31 @@ bpmnModdle.fromXML(bpmnText).then(bpmn => {
                 idMap[f].documentation ? idMap[f].documentation[0].text.replaceAll('\n','\n\t\t') : '', 
                 adjList[f],
                 lastObjs[f],
-                hasLanes ? multiProcessObject.signatory : "generic")
+                hasLanes ? multiProcessObject.lane : "generic")
             )
             return [hiddenTree, idMap, adjList, lastObjs]
         }
+
+        DAMLFileText += `setup = script do
+
+        alice <- allocatePartyWithHint "Alice" (PartyIdHint "alice")
+        hugo <- allocatePartyWithHint "Hugo" (PartyIdHint "hugo")
+        bob <- allocatePartyWithHint "Bob" (PartyIdHint "bob")
+        paco <- allocatePartyWithHint "Paco" (PartyIdHint "paco")
+        luis <- allocatePartyWithHint "Luis" (PartyIdHint "luis")
+        aliceId <- validateUserId "alice"
+        bobId <- validateUserId "bob"
+        hugoId <- validateUserId "hugo"
+        pacoId <- validateUserId "paco"
+        luisId <- validateUserId "luis"
+    
+        createUser (User aliceId (Some alice)) [CanActAs alice] 
+        createUser (User bobId (Some bob)) [CanActAs bob]
+        createUser (User hugoId (Some hugo)) [CanActAs hugo]
+        createUser (User pacoId (Some paco)) [CanActAs paco]
+        createUser (User luisId (Some luis)) [CanActAs luis]
+    
+        pure ()`
 
 
         fs.mkdir("daml_output/daml",{ recursive: true }, (err) => {
@@ -272,17 +294,22 @@ bpmnModdle.fromXML(bpmnText).then(bpmn => {
                 throw err;
             }
             else{
-                fs.writeFile("daml_output/daml/Main.daml", DAMLFileText, (err2) => {if (err2) throw (err2)})
+                fs.writeFile("daml_output/daml/Step.daml", DAMLFileText, (err2) => {if (err2) throw (err2)})
                 fs.writeFile("daml_output/daml.yaml",`sdk-version: 2.1.1
 name: project
 source: daml
+init-script: Main:setup
 version: 0.0.1
 dependencies:
     - daml-prim
-    - daml-stdlib`, (err2) => {if (err2) throw (err2)})
+    - daml-stdlib
+    - daml-script`, (err2) => {if (err2) throw (err2)})
             }
         })
+        //exec('sed "s/\r/\n/g" daml_output/daml/Step.daml | sed "s/\t/    /g" > daml_output/daml/Main.daml')
     });
+
+
 
 
 

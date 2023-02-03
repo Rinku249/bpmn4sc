@@ -4,13 +4,14 @@ type <%=parent.id%>Key = (Party, Party)
 template <%= parent.id %> 
     with
         <%= parent.documentation %>
+        creator : Party
     where
-        signatory <%= parent.signatory -%>
+        signatory creator
         <% x = parent.documentation.split("\n\t\t");
             m = undefined;
         for (let i = x.length-1 ; i < x.length ; i--){
             if(x[i].includes("Party")){
-                if(x[i].split(" : Party")[0] === parent.signatory){
+                if(x[i].split(" : Party")[0] === parent.lane){
                     continue;
                 }
                 else{
@@ -19,11 +20,10 @@ template <%= parent.id %>
                     break;
                 }
             }
-        }%>
-        observer <%= m -%>
+        }%>observer <%= m -%>
 
         <% if (recursion) { %>
-        key (<%=parent.signatory%>, <%= m %>) : <%=parent.id%>Key
+        key (<%=parent.lane%>, <%= m %>) : <%=parent.id%>Key
         maintainer key._1
         <% } -%>
         <%if (recursion) { %>
@@ -34,12 +34,12 @@ template <%= parent.id %>
             do
                 create Repetition with
                     <%= m %> = <%= m %>
-                    <%= parent.signatory%> = <%= parent.signatory%>
+                    <%= parent.lane%> = <%= parent.lane%>
                     desiredReturn = desiredReturn
         <%} else { -%>
 
         choice <%= parent.name.replaceAll(" ","") %> : ()
-            controller <%= parent.signatory %>
+            controller <%= parent.lane %>
             do
                 return ()
         <% } -%>
@@ -48,11 +48,11 @@ type RepetitionKey = (Party, Party)
 template Repetition
     with
         <%= m %> : Party
-        <%= parent.signatory%> : Party
+        <%= parent.lane%> : Party
         desiredReturn : Text
     where
-        signatory <%= parent.signatory%>
+        signatory <%= parent.lane%>
         observer <%= m %>
     
-        key (<%=parent.signatory%>, <%= m %>) : RepetitionKey
+        key (<%=parent.lane%>, <%= m %>) : RepetitionKey
         maintainer key._1<%} %>

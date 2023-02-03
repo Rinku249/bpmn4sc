@@ -1,19 +1,22 @@
 template <%= parent.id %> 
     with
         <%= parent.documentation %>
+        creator : Party
     where
-        signatory <%= parent.signatory %>
+        signatory creator
+        observer <%= parent.lane %>
 
     <%- "\r\t\t" %>choice <%= parent.name.replaceAll(" ","") %> : (<% children.forEach((child,index) => { -%> ContractId <%-child[0].id %><% if(children.length-1 != index){%>,<%}%> <% }) %>) <%let done = false %>
     <% children.forEach((child,index) => { %><% if (!child[3] && !done) { %><% done = true %><%="\t\t"%>with<% child[2].forEach((child2,index2) => { %><%="\r\t\t\t\t"%><%=child2%><% }) %><%="\r"%><% } else if (!child[3] && done) { %><% child[2].forEach((child2,index2) => { %><%="\t\t\t\t"%><%=child2%>
 <% }) %><% } -%><% }) -%>
-<%-"\t\tcontroller " + parent.signatory %>
+<%-"\t\tcontroller " + parent.lane %>
             do
     <%-"\t"%><% children.forEach((child,index) => { -%>
         contract<%=index%> <%-decodeURI('%3C')+"-"%> create <%-child[0].id -%> with
         <% child[1].forEach((child2,index2) => { -%>
             <%-child2.split(" :")[0] %> = <%-child2.split(" :")[0] -%> 
         <% }) -%><% if (!child[3]) { -%><% child[2].forEach((child2,index2) => { -%>
-            <%-child2.split(" :")[0] %> = <%-child2.split(" :")[0] %><%= "\r\t\t" %><% }) -%><% } -%><% }) %>
+            <%-child2.split(" :")[0] %> = <%-child2.split(" :")[0] %><%= "\r\t\t" %><% }) -%><% } -%>            creator = <%= parent.lane %>
+        <% }) %>
                 return (<% children.forEach((child,index) => { -%>contract<%=index%><% if(children.length-1 != index){%>,<%}%><% }) %>) 
 

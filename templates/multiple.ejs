@@ -1,8 +1,10 @@
 template <%= parent.id %> 
     with
         <%= parent.documentation %>
+        creator : Party
     where
-        signatory <%= parent.signatory %>
+        signatory creator
+        observer <%= parent.lane %>
         <% x = first.documentation.split("\n\t\t");
         m = undefined;
         for (let i = 0 ; i < x.length ; i++){
@@ -20,21 +22,23 @@ template <%= parent.id %>
             }
         }%>
         nonconsuming choice <%= parent.name.replaceAll(" ","") %> : [ContractId <%= child.id %>]
-            controller <%= parent.signatory %>
+            controller <%= parent.lane %>
             do
                 mapA(\c -> 
                     create <%- child.id %> with
                 <% thisReq.forEach((child,index) => { -%>
             <%= child.split(" :")[0] %> = <%-child.split(" :")[0] -%> 
                 <% }) -%><% if (!equal) { -%><% withs.forEach((child,index) => { -%>
-            <%= child.split(" :")[0] -%> = c<% }) -%><% } %>) <%=p%>
+            <%= child.split(" :")[0] -%> = c
+                            creator = <%= parent.lane %><% }) -%><% } %>) <%=p%>
 
         choice FinishRecursion : ContractId <%= first.id %>
-            controller <%= parent.signatory %>
+            controller <%= parent.lane %>
             do
                 create <%- first.id %> with
                 <% thisReq.forEach((child,index) => { -%>
     <%= child.split(" :")[0] %> = <%-child.split(" :")[0] -%> 
                 <% }) -%>
     <%=m%> = <%=p%>
+                    creator = <%= parent.lane %>
 

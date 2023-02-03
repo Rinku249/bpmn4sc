@@ -1,8 +1,10 @@
 template <%= parent.id %> 
     with
         <%= parent.documentation %>
+        creator : Party
     where
-        signatory <%= parent.signatory %>
+        signatory creator
+        observer <%= parent.lane %>
         <% x = parent.documentation.split("\n\t\t");
         m = undefined;
         for (let i = 0 ; i < x.length ; i++){
@@ -20,11 +22,11 @@ template <%= parent.id %>
         }
         %>
         choice <%= parent.name.replaceAll(" ","") %> : ContractId <%= child.id %>
-            controller <%= parent.signatory %>
+            controller <%= parent.lane %>
             do
-                lookedValues <- mapA (\c -> lookupByKey @Repetition (<%= parent.signatory %>, c)) <%=m%>
+                lookedValues <- mapA (\c -> lookupByKey @Repetition (<%= parent.lane %>, c)) <%=m%>
                 let qs = catOptionals lookedValues
-                lookedEmpty <- mapA (\c -> lookupByKey @<%= last.id %> (<%= parent.signatory %>, c)) <%=m%>
+                lookedEmpty <- mapA (\c -> lookupByKey @<%= last.id %> (<%= parent.lane %>, c)) <%=m%>
                 let sv = catOptionals lookedEmpty
                 values <- mapA (\id -> fetch id) qs
 
@@ -39,4 +41,5 @@ template <%= parent.id %>
         <%= child.split(" :")[0] %> = <%-child.split(" :")[0] -%> 
             <% }) -%>
         <%= p %>
+                    creator = <%= parent.lane %>
                 

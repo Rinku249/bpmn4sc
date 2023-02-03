@@ -1,12 +1,14 @@
 template <%= parent.id %> 
     with
         <%= parent.documentation %>
+        creator : Party
     where
-        signatory <%= parent.signatory %>
+        signatory creator
+        observer <%= parent.lane %>
 <% children.forEach((child,index) => { -%>
     <% if (!child[1].length) { %>
         choice <%= parent.name.replaceAll(" ","") %> : ()
-            controller <%= parent.signatory %>
+            controller <%= parent.lane %>
             do
                 return ()
             <% "\r" -%>
@@ -17,11 +19,11 @@ template <%= parent.id %>
             <% child[2].forEach((child2,index2) => { -%>
     <%-child2%>  
             <% }) %><% } -%>
-controller <%= parent.signatory %>
+controller <%= parent.lane %>
             do
                 create <%- child[0].id -%> with
                     <% child[1].forEach((child2,index2) => { -%>
 <%-child2.split(" :")[0] %> = <%-child2.split(" :")[0] -%> 
                     <% }) -%><% if (!child[3]) { -%><% child[2].forEach((child2,index2) => { -%>
 <%-child2.split(" :")[0] %> = <%-child2.split(" :")[0] %>
-                    <% })} -%><% }})-%> 
+                    <% })} -%>creator = <%= parent.lane %><% }})-%>

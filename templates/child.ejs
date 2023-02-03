@@ -1,19 +1,18 @@
 template <%= parent.id %> 
     with
         <%= parent.documentation %>
+        creator : Party
     where
-        signatory <%= parent.signatory %>
+        signatory creator
+        observer <%= parent.lane %>
         
         choice <%= parent.name.replaceAll(" ","") %> : ContractId <%= child.id -%>
         <% if (!equal) { -%><% "\r" %>
             with<% withs.forEach((child,index) => { -%><%= "\r\t\t\t\t" + child%><% }) -%>
             <% } %>
-            controller <%= parent.signatory %>
+            controller <%= parent.lane %>
             do
                 create <%- child.id %> with
-            <% thisReq.forEach((child,index) => { -%>
-        <%= child.split(" :")[0] %> = <%-child.split(" :")[0] -%> 
-            <% }) -%><% if (!equal) { -%><% withs.forEach((child,index) => { -%>
-        <%= child.split(" :")[0] -%> = <%-child.split(" :")[0] %>
-            <% }) -%>
-        <% } %>
+            <% thisReq.forEach((child,index) => { %>        <%= child.split(" :")[0] %> = <%-child.split(" :")[0] %>
+            <% }) %><% if (!equal) { %><% withs.forEach((child,index) => { %>        <%= child.split(" :")[0] %> = <%-child.split(" :")[0] %>
+            <% }) %><% } %>        creator = <%= parent.lane -%>
